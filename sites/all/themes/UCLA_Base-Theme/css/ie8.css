@@ -1,0 +1,15 @@
+#navigation {
+	height: 3.5em;
+	position: absolute;
+	top: 0;
+	width: 100%;
+}
+
+#main {
+	position: relative;	
+	padding-top: 3.5em;
+}
+
+.acc_image img {
+	max-width: none;
+}

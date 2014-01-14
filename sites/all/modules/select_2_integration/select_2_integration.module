@@ -1,0 +1,548 @@
+<?php
+
+define('SELECT2_MIN_PLUGIN_VERSION', '3.4.0');
+define('SELECT2_INTGRATION_PLUGIN_PATH', 'sites/all/libraries/select2');
+
+define('SELECT2_INTEGRATION_MODULE_PATH', drupal_get_path('module', 'select_2_integration'));
+
+define('SELECT2_INTEGRATION_VALUES_SEPARATOR', '¶');
+
+function select_2_integration_theme(){
+	return array(
+			'select2_hidden' => array(
+				'render element' => 'element',
+			)
+	);
+}
+
+/**
+ * Implements hook_library().
+ */
+function select_2_integration_library() {
+	// Library One.
+	
+	global $user;
+	
+	
+	$translation_file = select_2_integration_get_plugin_path() . '/select2_locale_' . $user->language . '.js';
+	$translation_file = file_exists($translation_file) ? $translation_file : null;
+	
+	$libraries['select2'] = array(
+			'title' => 'Select2',
+			'website' => 'http://ivaynberg.github.io/select2',
+			'version' => '3.4.0',
+			'js' => array(
+					select_2_integration_get_js() => array(),
+					SELECT2_INTEGRATION_MODULE_PATH . '/js/select2_integration.js' => array(),
+			),
+			'css' => array(
+					select_2_integration_get_plugin_path() . '/select2.css' => array(
+						'type' => 'file',
+						'media' => 'screen',
+					),
+					SELECT2_INTEGRATION_MODULE_PATH . '/css/select2_integration.css' => array(
+						'type' => 'file',
+						'media' => 'screen',
+					),
+			),
+	);
+	
+	if($translation_file){
+		$libraries['select2']['js'][$translation_file] = array();
+	}
+	
+	return $libraries;
+}
+
+/**
+ * Implementation of hook_element_info();
+ */
+function select_2_integration_element_info() {
+	return array(
+			'select2_hidden' => array(
+					'#input' => true,
+					'#process' => array('select_2_integration_select_element_process'),
+					'#theme' => array('select2_hidden'),
+					'#theme_wrapper' => 'form_element',
+					'#select2' => array(
+						'separator' => SELECT2_INTEGRATION_VALUES_SEPARATOR,
+					),
+			),
+	);
+}
+
+/**
+ * Returns HTML for a hidden form element for Select2 plugin.
+ *
+ * @param $variables
+ *   An associative array containing:
+ *   - element: An associative array containing the properties of the element.
+ *     Properties used: #name, #value, #attributes.
+ *
+ * @ingroup themeable
+ */
+function theme_select2_hidden($variables) {
+	
+	$element = $variables['element'];
+	$element['#attributes']['type'] = 'hidden';
+	element_set_attributes($element, array('name', 'value'));
+	
+	$element['#attributes'] = isset($element['#attributes']) ? (is_array($element['#attributes']) ? $element['#attributes'] : array()) : array();
+	
+  _form_set_class($element);
+	
+	if(isset($element['#attributes']['value']) && is_array($element['#attributes']['value'])){
+		$element['#attributes']['value'] = implode(isset($element['#select2']['separator']) ? $element['#select2']['separator'] : SELECT2_INTEGRATION_VALUES_SEPARATOR, $element['#attributes']['value']);
+	}
+	
+	$variables['element']['#children'] = '<input' . drupal_attributes($element['#attributes']) . " />\n";	
+	
+	return theme('form_element', $variables);
+}
+
+/**
+ * Implements hook_element_info_alter().
+ */
+function select_2_integration_element_info_alter(&$type){
+	
+	if(!isset($type['select'])) return;
+	
+	$type['select']['#process'][] = 'select_2_integration_select_element_process';
+	
+}
+
+
+function select_2_integration_select_element_process($element, &$form_state) {
+	
+	if($element['#name'] == 'field[settings][allowed_values][0][vocabulary]'){
+		$element['#select2'] = array();
+	}
+	
+	if (isset($element['#select2_processed'])) {
+		return $element;
+	}
+	
+	if(!isset($element['#select2'])){
+		$element['#select2_processed'] = true;
+		return $element;
+	}
+	
+	//
+	if((!isset($element['#required']) || !$element['#required']) && !isset($element['#select2']['allowClear'])){
+		$element['#select2']['allowClear'] = true;
+	}
+	
+	if((!isset($element['#select2']['placeholder']) || !$element['#select2']['placeholder']) && isset($element['#options']['_none'])){
+		$element['#select2']['placeholder'] = $element['#options']['_none'];
+		unset($element['#options']['_none']);
+	}
+	
+	$element['#attributes']['class'][] = 'use-select-2';
+	
+	$element['#attached']['library'][] = array('select_2_integration', 'select2');
+	
+	drupal_add_js(array('select_2' => array(
+		'elements' => array(),
+	)), 'setting');
+	
+	$element_id = isset($element['#id']) ? $element['#id'] : ( isset($element['#attributes']['id']) ? $element['#attributes']['id'] : drupal_clean_css_identifier($element['#name']));
+	
+	if($element['#type'] == 'select2_hidden' && isset($element['#options']) && is_array($element['#options']) && (!isset($element['#validated']) || !$element['#validated'])){
+		
+		$rebuild_options_vocs_list = select_2_integration_taxonomy_volabilaries_to_rebuild_options();
+		
+		$element['#attributes']['id'] = $element_id;
+		
+		$data = array();
+		
+		foreach ($element['#options'] as $id => $value){
+			$data_element = new stdClass();
+			
+			$data_element->id = $id;
+			$data_element->text = $value;
+			
+			$data[] = $data_element;
+		}
+		
+		$element['#select2']['data'] = $data;
+		
+		unset($element['#options']);
+		
+	}
+	
+	drupal_add_js(array('select_2' => array(
+		'elements' => array(
+			$element_id => $element['#select2'],
+		),
+	)), 'setting');
+	
+	$element['#select2_processed'] = true;
+	
+	return $element;
+}
+
+
+/**
+ * Return the version of Select2 plugin that is installed.
+ *
+ * This can be used by other modules' hook_requirements() to ensure that the
+ * proper version of Colorbox plugin is installed.
+ *
+ * @see version_compare()
+ */
+function select_2_integration_get_plugin_version($select2_js = NULL){
+	
+	$version = 0;
+	$pattern = '#Version:\s*([0-9\.a-z]+)#uims';
+	
+	// No file is passed in so use the default location.
+	if (is_null($select2_js)) {
+		$select2_js = select_2_integration_get_js();
+	}
+	
+	// Return the version of Colorbox plugin, it it exists.
+	if (file_exists($select2_js)) {
+		$select2_plugin = file_get_contents($select2_js, NULL, NULL, 0);
+		if (preg_match($pattern, $select2_plugin, $matches)) {
+			$version = $matches[1];
+		}
+	}
+	
+	return $version;
+	
+}
+
+
+/**
+ * Return the JS filename for Select2 plugin.
+ *
+ * @return
+ *   Boolean indicating if the JS is located.
+ */
+function select_2_integration_get_js(){
+	$library_path = select_2_integration_get_plugin_path();
+  
+	if (file_exists($library_path . '/select2.js') && file_exists($library_path . '/select2.min.js')) {
+		$select2_js_map = array('none' => 'select2.js', 'min' => 'select2.min.js');
+
+		$compression_type = variable_get('select2_integration_compression_type', 'min');
+		
+		$select2_js = $select2_js_map[$compression_type];
+		return $library_path . '/' . $select2_js;
+	} elseif(file_exists($library_path . '/select2.js')) {
+		drupal_set_message(t('min version of Select2 don\'t exists.'), 'warning', FALSE);
+		variable_set('select2_integration_compression_type', 'none');
+		return $library_path . '/select2.js';
+	} else {
+		drupal_set_message(t('Select2 plugin core files not found.'), 'warning', FALSE);
+	}
+}
+
+/**
+ * Return the path to the Select2 plugin.
+ */
+function select_2_integration_get_plugin_path() {
+	static $library_path = NULL;
+
+	// Try to locate the library path in any possible setup.
+	if ($library_path == NULL) {
+		// First check the default location.
+		$path = variable_get('select_2_integration_plugin_path', SELECT2_INTGRATION_PLUGIN_PATH);
+		if (is_dir($path)) {
+			$library_path = $path;
+		}
+		// Ask the libraries module as a fallback.
+		elseif ($library_path == NULL && module_exists('libraries')) {
+			if ($path = libraries_get_path('select2')) {
+				$library_path = $path;
+				variable_set('select_2_integration_plugin_path', $library_path);
+			}
+		}
+		// If no path is found suggest the default one.
+		elseif ($library_path == NULL) {
+			$library_path = SELECT2_INTGRATION_PLUGIN_PATH;
+		}
+	}
+
+	return $library_path;
+}
+
+/**
+ * Implements hook_field_widget_info_alter().
+ */
+function select_2_integration_field_widget_info_alter(&$info){
+	
+	if(!isset($info['options_select'])) return;
+	
+	$info['options_select']['settings']['use_select2'] = false;
+	
+}
+
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Add a checkbox for the 'use_select2' instance settings on the 'Edit
+ * field instance' form.
+ */
+function select_2_integration_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+	
+	if($form['#instance']['widget']['type'] != 'options_select') return;
+	
+	$field = $form['#field'];
+	
+	$form['instance']['settings']['select2_integration'] = array(
+			'#type'    => 'fieldset',
+			'#title'   => 'Select2 integration settings'
+			
+	);
+	
+	$use_select2 = isset($form['#instance']['settings']['use_select2']) ? $form['#instance']['settings']['use_select2'] : ( isset($form['#instance']['settings']['select2_integration']['use_select2']) ? $form['#instance']['settings']['select2_integration']['use_select2'] : false);
+	
+	$form['instance']['settings']['select2_integration']['use_select2'] = array(
+			'#type'          => 'checkbox',
+			'#title'         => t('Use Select2 plugin for this field in form'),
+			'#default_value' =>  $use_select2,
+			'#weight'        => -10,
+	);
+	
+	if($field['type'] == 'taxonomy_term_reference'){
+		// for taxonomy term reference fields alow "add terms on fly" future
+		$form['instance']['settings']['select2_integration']['allow_add_onfly'] = array(
+				'#type'          => 'checkbox',
+				'#title'         => t('Allow add terms "on fly"'),
+				'#default_value' => isset($form['#instance']['settings']['select2_integration']['allow_add_onfly']) ? $form['#instance']['settings']['select2_integration']['allow_add_onfly'] : false,
+				'#weight'        => 0,
+				'#states' => array(
+						'invisible' => array(
+								':input[name="instance[settings][select2_integration][use_select2]"]' => array('checked' => FALSE),
+						),
+				),
+		);
+		
+		$form['instance']['settings']['select2_integration']['show_voc_terms_page_link'] = array(
+				'#type'          => 'checkbox',
+				'#title'         => t('Show link to vocabulary terms list page'),
+				'#default_value' => isset($form['#instance']['settings']['select2_integration']['show_voc_terms_page_link']) ? $form['#instance']['settings']['select2_integration']['show_voc_terms_page_link'] : false,
+				'#weight'        => 0,
+				'#states' => array(
+						'invisible' => array(
+								':input[name="instance[settings][select2_integration][use_select2]"]' => array('checked' => FALSE),
+						),
+				),
+		);
+		
+	}
+	
+	//placeholder
+	$form['instance']['settings']['select2_integration']['styling']['placeholder'] = array(
+			'#type'          => 'textfield',
+			'#title'         => t('Placeholder text'),
+			'#default_value' => isset($form['#instance']['settings']['select2_integration']['styling']['placeholder']) ? $form['#instance']['settings']['select2_integration']['styling']['placeholder'] : false,
+			'#weight'        => 0,
+			'#states' => array(
+					'invisible' => array(
+							':input[name="instance[settings][select2_integration][use_select2]"]' => array('checked' => FALSE),
+					),
+			),
+			'#return_value' => true,
+	);
+	
+	$form['instance']['settings']['select2_integration']['styling']['dropdownAutoWidth'] = array(
+			'#type'          => 'checkbox',
+			'#title'         => t('Dropdown auto width'),
+			'#default_value' => isset($form['#instance']['settings']['select2_integration']['styling']['dropdownAutoWidth']) ? $form['#instance']['settings']['select2_integration']['styling']['dropdownAutoWidth'] : false,
+			'#weight'        => 10,
+			'#states' => array(
+					'invisible' => array(
+							':input[name="instance[settings][select2_integration][use_select2]"]' => array('checked' => FALSE),
+					),
+			),
+			'#return_value' => true,
+	);
+	
+}
+
+
+function select_2_integration_form_field_ui_field_overview_form_alter(&$form, &$form_state, $form_id){
+	$form['fields']['_add_existing_field']['field_name']['#select2'] = array();
+}
+
+
+function select_2_integration_form_field_ui_field_settings_form_altert(&$form, &$form_state, $form_id){
+	dpm($form);
+}
+
+function select_2_integration_field_settings_form($field, $instance, $has_data) {
+	
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ *
+ */
+function select_2_integration_field_widget_form_alter(&$element, &$form_state, $context){
+	
+	$context['instance']['settings'] += array(
+		'select2_integration' => array(
+			'use_select2' => isset($context['instance']['settings']['use_select2']) ? $context['instance']['settings']['use_select2'] : false,
+		),
+	);
+	
+	if(isset($element['#type']) && $element['#type'] == 'select'
+	    && $context['instance']['settings']['select2_integration']['use_select2']){
+		
+		$settings = $context['instance']['settings']['select2_integration'];
+		
+		$styling_settings = isset($settings['styling']) ? $settings['styling'] : array();
+		
+		$settings = array_merge($settings, $styling_settings);
+		
+		$element['#select2'] = $settings;
+		
+		if(isset($settings['allow_add_onfly']) && $settings['allow_add_onfly']){
+			
+			$element['#type'] = 'select2_hidden';
+			
+			$element['#select2']['taxonomy_vocabulary'] = $context['field']['settings']['allowed_values'][0]['vocabulary'];
+			
+			$element['#element_validate'] = array_merge(array('select_2_integration_taxonomy_term_reference_validate'), $element['#element_validate']);
+			
+			$descrition = t('This element supports "Add terms on fly" function.<br>You can select terms from defined terms list, or add your new term(s), by typing name of term(s) manually, press Enter key after typing new term name, for adding it to selected items list. <br><b>New term(s) will be saved when form will be submitted</b>.');
+			
+			$terms_edit_page_link = '<br>' . l(t('Edit vocabulary terms'), 'admin/structure/taxonomy/' . $element['#select2']['taxonomy_vocabulary'], array('attributes' => array('target' => '_blank', 'class' => array('taxonomy_voc_terms_page_link'))));
+			
+			if(isset($settings['show_voc_terms_page_link']) && $settings['show_voc_terms_page_link']){
+				$descrition .= $terms_edit_page_link;
+			} elseif(!isset($settings['show_voc_terms_page_link'])){
+				$descrition .= $terms_edit_page_link;
+			}
+			
+			$element['#description'] = (isset($element['#description']) ? $element['#description'] . '<br/>' : '') . $descrition;
+			
+			if(isset($element['#multiple']) && $element['#multiple']){
+				$element['#select2']['multiple'] = TRUE;
+				$element['#select2']['separator'] = SELECT2_INTEGRATION_VALUES_SEPARATOR;
+			}
+			
+		}
+		
+	}
+}
+
+
+function select_2_integration_taxonomy_term_reference_validate(&$element, &$form_state) {
+	
+	$values = is_string($element['#value']) ? explode(SELECT2_INTEGRATION_VALUES_SEPARATOR, $element['#value']) : null;
+	
+	$values_to_set = is_array($element['#value']) ? $element['#value'] : array();
+	
+	$v_mname = isset($element['#select2']['taxonomy_vocabulary']) ? $element['#select2']['taxonomy_vocabulary'] : '';
+		
+	$terms = array();
+	
+	if(isset($element['#required']) && $element['#required'] && empty($element['#value'])){
+		$values = array();
+	}
+	
+	$element_id = isset($element['#id']) ? $element['#id'] : ( isset($element['#attributes']['id']) ? $element['#attributes']['id'] : drupal_clean_css_identifier($element['#name']));
+	
+	$taxonomy_vocabulary = taxonomy_vocabulary_machine_name_load($v_mname);
+	
+	if($values && $taxonomy_vocabulary){
+	
+		$rebuild_options_vocs_list = select_2_integration_taxonomy_volabilaries_to_rebuild_options();
+		
+		$terms = taxonomy_term_load_multiple(false, array('vid' => $taxonomy_vocabulary->vid));
+			
+		foreach ($values as $key => $tid){
+			
+			if(!$tid) continue;
+			
+			if(is_numeric($tid) && !strpos($tid, select_2_integration_get_system_decimal_point())){
+				//check for valid tid
+				
+				$num_tid = intval($tid);
+				
+				if(isset($terms[$num_tid])){ 
+					$values_to_set[] = $tid;
+					continue;
+				}
+			}
+		
+			//trying to add new term
+			
+			//get max weight of terms in current voc for adding new term at the end of list
+			$max_weight_select = db_select('taxonomy_term_data', 'td')
+			->condition('vid', $taxonomy_vocabulary->vid);
+			$max_weight_select->addExpression('MAX(td.weight)');
+			
+			$max_weight = $max_weight_select->execute()->fetchField();
+			
+			$max_weight = $max_weight ? $max_weight + 1 : 1;
+			
+			$new_term = new stdClass();
+			
+			$new_term->vid = $taxonomy_vocabulary->vid;
+			$new_term->name = $tid;
+			$new_term->weight = $max_weight;
+			
+			$save_result = taxonomy_term_save($new_term);
+			
+			if($save_result == SAVED_NEW){
+				drupal_set_message(t('New taxonomy term "%term_name" saved in vocabulary "%vocabulary_name". You can edit it on !edit_term_link.', array('%term_name' => $tid, '%vocabulary_name' => $v_mname, '!edit_term_link' => l('this page', 'taxonomy/term/' . $new_term->tid . '/edit'))));
+				$rebuild_options_vocs_list[] = $v_mname;
+				$values_to_set[] = $new_term->tid;
+				
+				$new_data_obj = new stdClass();
+				$new_data_obj->id = $new_term->tid;
+				$new_data_obj->text = $new_term->name;
+				
+				drupal_add_js(array('select_2' => array(
+					'elements' => array(
+						$element_id => array(
+							'data' => array(
+								0 => $new_data_obj,
+							),
+						),
+					),
+				)), 'setting');
+				
+			} else {
+				drupal_set_message('Error while saving new term - term skiped while subiting form.', 'error');
+				
+				unset($values[$key]);
+			} 
+			
+		}
+		
+	}
+	
+	if(count($values_to_set)){
+		form_set_value($element, $values_to_set, $form_state);
+		$element['#value'] = $values_to_set;
+		$element['#validated'] = true;
+	}
+	
+}
+
+
+function select_2_integration_get_system_decimal_point(){
+	$dp = &drupal_static(__FUNCTION__, false);
+	
+	if(!$dp){
+		
+		$locale_info = localeconv();
+		$dp = $locale_info['decimal_point'];
+	}
+	
+	return $dp ? $dp : '.';
+}
+
+
+function select_2_integration_taxonomy_volabilaries_to_rebuild_options(){
+	
+	$rebuild_options_vocs_list = &drupal_static(__FUNCTION__, array());
+	
+	return $rebuild_options_vocs_list;
+}

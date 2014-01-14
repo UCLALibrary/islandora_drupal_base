@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the MODS Basic Image feature.
+ */
+
+include_once 'mods_basic_image.features.inc';

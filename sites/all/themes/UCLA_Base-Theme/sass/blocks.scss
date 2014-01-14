@@ -1,0 +1,413 @@
+/**
+ * @file
+ * Block Styling
+ */
+
+@import "base";
+
+
+.block { /* Block wrapper */
+  margin-bottom: 1.5em;
+
+  &.first { /* The first block in the region */
+  }
+
+  &.last { /* The last block in the region */
+  }
+
+  &.odd { /* Zebra striping for each block in the region */
+  }
+
+  &.even { /* Zebra striping for each block in the region */
+  }
+}
+
+h2.block-title { /* Block title */
+  color: #fff;
+  text-shadow: 0 1px 1px #000;
+  font-size: 115%;
+  font-weight: normal;
+}
+
+#block-aggregator-category-1 { /* Block for the latest news items in the first category */
+}
+
+#block-aggregator-feed-1 { /* Block for the latest news items in the first feed */
+}
+
+#block-block-1 { /* First block created with "Add block" link */
+  margin-top: 1em;
+  margin-bottom: 2.5em;
+  clear: left;
+  p {
+    margin: 0.3em 0 0 0;
+  }
+}
+
+#block-block-2 {
+  float: right;
+  margin: 0;
+  height: 45px;
+  position: relative;
+  top: -16px;
+}
+
+#block-block-2 a {
+  padding-left: 5px;
+}
+
+/* Islandora Blocks */
+
+#block-accordion-rotator-accordion-rotator {
+  margin-bottom: 2.7em;
+}
+
+#block-islandora-solr-simple {
+  margin-top: 0.6em;
+  position: relative;
+
+  .form-item {
+    margin: 0;
+  }
+  .form-text {
+    width: 39%;
+    font-family: 'News Cycle', helvetica, arial;
+    color: #808184;
+    float: right;
+    height: 1.9em;
+    padding-left: 0.5em;
+    border: 1px solid #666;
+    border-radius: 7px;
+      -webkit-border-radius: 7px;
+    box-shadow: 0 3px 3px -3px #808184;
+      -webkit-box-shadow: 0 3px 3px -3px #808184;
+  }
+  .form-submit {
+    background: url("../images/search.png") no-repeat;
+    position: absolute;
+    right: 12px;
+    top: 3px;
+    color: transparent;
+    border: none;
+    height: 28px;
+    width: 28px; 
+  }
+  .contextual-links-trigger {
+    display: none;
+  }
+}
+
+.islandora-solr-content {
+  tr {
+  display: block;
+  margin-bottom: 0.5em;
+  margin-left: 0.1em;
+  background: #CACDD3;
+  border: 1px solid #ccc;
+  padding: 5px;
+  }
+
+  td {
+   padding-right: 5px; 
+  } 
+}
+
+
+/* Menu Blocks */
+
+#block-menu-block-1, #block-islandora-solr-basic-facets, #block-islandora-solr-sort {
+  background: #fefefe;
+  border: 1px solid #35425F;
+  border-top: none;
+  margin: 0 -5px 1.5em;
+
+  h2 {
+    background: url("../images/triangle.png") no-repeat 3px -2px #35425F;
+    font-size: 90%;
+    padding: 18px 0 10px 18px;
+    text-transform: uppercase;
+    letter-spacing: 1.2pt;
+  }
+
+  h3 {
+    font-size: 110%;
+    font-weight: normal;
+    margin-left: 1em;
+    margin-bottom: 0;
+    letter-spacing: 0.8pt;
+  }
+
+  ul {
+    padding: 0 1em;
+    margin-top: 1em;
+    li {
+    list-style: none;
+    margin-bottom: 0.5em;
+    line-height: 1.4em;
+    font-size: 85%;
+    }
+  }
+
+}
+
+/* Islandora Blocks */
+
+#block-islandora-solr-display-switch {
+  float: right;
+  margin: -7px;
+  position: relative; z-index: 50;
+  ul {
+    list-style: none; 
+    padding: 0;
+    margin: 11px;
+    min-width: 75px;
+  }
+}
+
+ul.pager {
+  margin: 1em 0;
+
+  li {
+
+    a {
+      color: #35425F;
+    }
+
+  }
+  li.pager-current {
+    color: #35425F;
+    background: #cbcbcb;
+    border: 1px solid #35425F;
+  }
+}
+
+.islandora-solr-display {
+
+  li {
+    float: left;
+  }
+   
+    a.display-default {
+      background: url("../images/display-grid-list.png") no-repeat top left;
+      width: 25px; height: 22px;
+      display: inline-block;
+      text-indent: -9999px;
+      outline: none;
+    }
+    a.display-grid {
+      @extend a.display-default;
+      background: url("../images/display-grid.png") no-repeat top left;
+    }
+    a.display-table {
+      @extend a.display-default;
+      background: url("../images/display-list.png") no-repeat top left;
+    }
+
+}
+
+.islandora-basic-collection-display-switch {
+  margin-top: 1em;
+  
+  li {
+    float: left;
+    padding: 0 !important;
+  }
+
+a.islandora-view-grid {
+    width: 25px; height: 22px;
+    display: inline-block;
+    text-indent: -9999px;
+    outline: none;
+    background: url("../images/display-grid.png") no-repeat top left;
+  }
+
+  a.islandora-view-list {
+    @extend a.islandora-view-grid;
+    background: url("../images/display-list.png") no-repeat top left;
+  }
+
+}
+
+#islandora-solr-top {
+  float: left;
+  margin-left: 7px;
+}
+
+.solr-label.dc-title, .solr-value.dc-title {
+  background: #dbdcdd;
+  border-radius: 0 0 5px 0;
+    -webkit-border-radius: 0 0 5px 0;
+}
+
+dl.solr-fields {
+  float: left;
+}
+
+dl.solr-grid-field {
+  background: #CACDD3;
+  padding: 5px 5px 1em;
+  width: 19%;
+  border: 1px solid #aaa;
+  min-height: 0;
+  box-shadow: 0 3px 3px -3px #808184;
+  -webkit-box-shadow: 0 3px 3px -3px #808184;
+  border-radius: 5px;
+  -webkit-border-radius: 5px;
+  dt.solr-grid-thumb {
+    img {
+      display: block;
+      margin: 0 auto;
+      border-radius: 0;
+      -webkit-border-radius: 0;
+    }
+  }
+  dd.solr-grid-caption {
+      margin-top: 1em;
+    a {
+      line-height: 1.3em; 
+      display: inline-block;
+      font-size: 85%;
+    }
+  }
+}
+
+dl.islandora-basic-collection-object {
+  @extend dl.solr-grid-field;
+  min-height: 320px;
+}
+
+.islandora-basic-collection-object dt img {
+  border-radius: 0;
+  -webkit-border-radius: 0;
+  box-shadow: 0 0 5px 1px rgba(38, 37, 38, 0.3);
+  -webkit-box-shadow: 0 0 5px 1px rgba(38, 37, 38, 0.3);
+  margin-left: 10px;
+}
+
+.islandora-basic-collection-grid {
+  dt.islandora-basic-collection-thumb{
+   @extend dt.solr-grid-thumb; 
+   margin-top: 10px; margin-bottom: 10px;
+  } 
+
+  dd.islandora-basic-collection-caption {
+    @extend dd.solr-grid-caption;
+  }
+}
+
+div.islandora-basic-collection-object {
+  @extend dl.solr-grid-field;
+  border: none;
+  width: auto;
+  dt {
+  }
+  dd.dc-description {
+    @extend dd.solr-grid-caption;
+    font-size: 85%;
+  }
+}
+
+.islandora-large-image-content, .islandora-basic-image-content {
+  background: #C1C7D3;
+  border-radius: 0;
+  border: 1px solid #999;
+}
+
+.islandora-large-image-sidebar, .islandora-basic-image-sidebar {
+  h2 {
+    text-shadow: 0 1px 1px #ccc;
+    margin: 0;
+    font-size: 110%;
+  }
+  p {
+    margin-top: 0.5em;
+    font-size: 90%;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.5em 0 0;
+    font-size: 90%;
+  }
+}
+
+.islandora-large-image-metadata, .islandora-basic-image-metadata {
+  margin: 1.5em 0 0 -1.8em;
+}
+
+#clip {
+}
+
+/* End Islandora stuff */
+
+#block-blog-recent { /* "Recent blog posts" block */
+}
+
+#block-book-navigation { /* "Book navigation" block for the current book's table of contents */
+}
+
+#block-comment-recent { /* "Recent comments" block */
+}
+
+#block-forum-active { /* "Active forum topics" block */
+}
+
+#block-forum-new { /* "New forum topics" block */
+}
+
+#block-locale-language { /* Language switcher block */
+}
+
+#block-menu-menu-NAME { /* Custom menu block */
+}
+
+#block-node-recent { /* "Recent content" block */
+}
+
+#block-node-syndicate { /* "Syndicate" block for primary RSS feed; see also page.css's .feed-icon */
+}
+
+#block-poll-recent { /* "Most recent poll" block */
+}
+
+#block-profile-author-information { /* "Author information" block for the profile of the page's author */
+}
+
+#block-search-form { /* "Search form" block */
+}
+
+#block-shortcut-shortcuts { /* "Shortcuts" block */
+}
+
+#block-statistics-popular { /* "Popular content" block */
+}
+
+#block-system-main-menu { /* "Main menu" block */
+}
+
+#block-system-management { /* "Management" block for Drupal management menu */
+}
+
+#block-system-navigation { /* "Navigation" block for Drupal navigation menu */
+}
+
+#block-system-user-menu { /* "User menu" block for Drupal user menu */
+}
+
+#block-system-help { /* "System help" block */
+}
+
+#block-system-main { /* "Main page content" block */
+}
+
+#block-system-powered-by { /* "Powered by Drupal" block */
+}
+
+#block-user-login { /* "User login form" block */
+}
+
+#block-user-new { /* "Who's new" block for a list of the newest users */
+}
+
+#block-user-online { /* "Who's online" block for a list of the online users */
+}

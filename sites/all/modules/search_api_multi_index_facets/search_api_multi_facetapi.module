@@ -1,0 +1,253 @@
+<?php
+/**
+ * @file
+ * Provides main hooks for the module.
+ * @copyright Copyright(c) 2012 Previous Next Pty Ltd
+ * @license GPL v2 http://www.fsf.org/licensing/licenses/gpl.html
+ * @author Lee Rowlands larowlan at previousnext dot com dot au
+ *
+ */
+
+/**
+ * Implements hook_facetapi_adapters().
+ */
+function search_api_multi_facetapi_facetapi_adapters() {
+  return array(
+    'search_api_multi' => array(
+      'handler' => array(
+        'class' => 'SearchApiMultiFacetapiAdapter',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_facetapi_searcher_info().
+ */
+function search_api_multi_facetapi_facetapi_searcher_info() {
+  $info = array();
+  $indexes = search_api_index_load_multiple(FALSE);
+  foreach ($indexes as $index) {
+    if ($index->enabled && $index->server()->supportsFeature('search_api_facets')) {
+      $server = $index->server();
+      $searcher_name = 'search_api_multi@' . $server->machine_name;
+      if (empty($info[$searcher_name])) {
+        $info[$searcher_name] = array(
+          'label' => t('Search service: @name', array('@name' => $server->machine_name)),
+          'adapter' => 'search_api_multi',
+          'instance' => $server->machine_name,
+          'types' => array($index->item_type),
+          'path' => '',
+          'supports facet missing' => TRUE,
+          'supports facet mincount' => TRUE,
+          'include default facets' => FALSE,
+        );
+      }
+      else {
+        $info[$searcher_name]['types'][] = $index->item_type;
+      }
+    }
+  }
+  return $info;
+}
+
+
+/**
+ * Implements hook_search_api_multi_query_alter().
+ *
+ * Adds Facet API support to the query.
+ */
+function search_api_multi_facetapi_search_api_multi_query_alter($query) {
+  if (module_exists('search_api_facetapi')) {
+    if ($query->getServer()->supportsFeature('search_api_facets')) {
+        // This is the main point of communication between the facet system and the
+        // search back-end - it makes the query respond to active facets.
+      $searcher = 'search_api_multi@' . $query->getServer()->machine_name;
+      $adapter = facetapi_adapter_load($searcher);
+      if ($adapter) {
+        $adapter->addActiveFilters($query);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function search_api_multi_facetapi_menu() {
+  // We need to handle our own menu paths for facets because we need a facet
+  // configuration page per server.
+  $first = TRUE;
+  foreach (facetapi_get_realm_info() as $realm_name => $realm) {
+    if ($first) {
+      $first = FALSE;
+      $items['admin/config/search/search_api/server/%search_api_server/facets'] = array(
+        'title'            => 'Facets',
+        'page callback'    => 'search_api_multi_facetapi_facetapi_settings',
+        'page arguments'   =>  array($realm_name, 5),
+        'weight'           => -1,
+        'access callback'  => 'search_api_multi_facetapi_facetapi_access',
+        'access arguments' => array(5),
+        'type'             => MENU_LOCAL_TASK,
+        'context'          => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      );
+      $items['admin/config/search/search_api/server/%search_api_server/facets/' . $realm_name] = array(
+        'title'            => $realm['label'],
+        'type'             => MENU_DEFAULT_LOCAL_TASK,
+        'weight'           => $realm['weight'],
+      );
+    }
+    else {
+      $items['admin/config/search/search_api/server/%search_api_server/facets/' . $realm_name] = array(
+        'title'            => $realm['label'],
+        'page callback'    => 'search_api_multi_facetapi_facetapi_settings',
+        'page arguments'   => array($realm_name, 5),
+        'access callback'  => 'search_api_multi_facetapi_facetapi_access',
+        'access arguments' => array(5),
+        'type'             => MENU_LOCAL_TASK,
+        'context'          => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+        'weight'           => $realm['weight'],
+      );
+    }
+  }
+
+  return $items;
+}
+
+/**
+ * Access callback for facet api tab.
+ *
+ * @param object $server
+ *   Server object
+ *
+ * @return bool
+ *   Grant access TRUE/FALSE
+*/
+function search_api_multi_facetapi_facetapi_access($server) {
+  return $server->supportsFeature('search_api_facets') && user_access('administer search_api');
+}
+
+/**
+ * Menu callback for the facet settings page.
+ */
+function search_api_multi_facetapi_facetapi_settings($realm_name, $server) {
+  if (!$server->supportsFeature('search_api_facets')) {
+    return array('#markup' => t('This index uses a server that does not support facet functionality.'));
+  }
+  $searcher_name = 'search_api_multi@' . $server->machine_name;
+  module_load_include('inc', 'facetapi', 'facetapi.admin');
+  return drupal_get_form('facetapi_realm_settings_form', $searcher_name, $realm_name);
+}
+
+/**
+ * Implements hook_facetapi_facet_info().
+ */
+function search_api_multi_facetapi_facetapi_facet_info(array $searcher_info) {
+  $facet_info = array();
+  if ('search_api_multi' == $searcher_info['adapter']) {
+    $indexes = search_api_index_load_multiple(FALSE);
+    foreach ($indexes as $index) {
+      if ($index->enabled && $index->server()->supportsFeature('search_api_facets')
+          && $index->server()->machine_name == $searcher_info['instance']) {
+        if (!empty($index->options['fields'])) {
+          $wrapper = $index->entityWrapper();
+          $bundle_key = NULL;
+          if (($entity_info = entity_get_info($index->item_type)) && !empty($entity_info['bundle keys']['bundle'])) {
+            $bundle_key = $entity_info['bundle keys']['bundle'];
+          }
+
+          // Some type-specific settings. Allowing to set some additional callbacks
+          // (and other settings) in the map options allows for easier overriding by
+          // other modules.
+          $type_settings = array(
+            'taxonomy_term' => array(
+              'hierarchy callback' => 'facetapi_get_taxonomy_hierarchy',
+            ),
+            'date' => array(
+              'query type' => 'date',
+              'map options' => array(
+                'map callback' => 'facetapi_map_date',
+              ),
+            ),
+          );
+
+          // Iterate through the indexed fields to set the facetapi settings for
+          // each one.
+          foreach ($index->getFields() as $key => $field) {
+            $key = $index->machine_name . ':' . $key;
+            $field['key'] = $key;
+            // Determine which, if any, of the field type-specific options will be
+            // used for this field.
+            $type = isset($field['entity_type']) ? $field['entity_type'] : $field['type'];
+            $type_settings += array($type => array());
+
+            $facet_info[$key] = $type_settings[$type] + array(
+              'label' => $field['name'],
+              'description' => t('Filter by @type.', array('@type' => $field['name'])),
+              'allowed operators' => array(
+                FACETAPI_OPERATOR_AND => TRUE,
+                FACETAPI_OPERATOR_OR => $index->server()->supportsFeature('search_api_facets_operator_or'),
+              ),
+              'dependency plugins' => array('role'),
+              'facet missing allowed' => TRUE,
+              'facet mincount allowed' => TRUE,
+              'map callback' => 'search_api_facetapi_facet_map_callback',
+              'map options' => array(),
+              'field type' => $type,
+            );
+            if ($type === 'date') {
+              $facet_info[$key]['description'] .= ' ' . t('(Caution: This may perform very poorly for large result sets.)');
+            }
+            $facet_info[$key]['map options'] += array(
+              'field' => $field,
+              'index id' => $index->machine_name,
+              'value callback' => '_search_api_facetapi_facet_create_label',
+            );
+            // Find out whether this property is a Field API field.
+            if (strpos($key, ':') === FALSE) {
+              if (isset($wrapper->$key)) {
+                $property_info = $wrapper->$key->info();
+                if (!empty($property_info['field'])) {
+                  $facet_info[$key]['field api name'] = $key;
+                }
+              }
+            }
+
+            // Add bundle information, if applicable.
+            if ($bundle_key) {
+              if ($key === $bundle_key) {
+                // Set entity type this field contains bundle information for.
+                $facet_info[$key]['field api bundles'][] = $index->item_type;
+              }
+              else {
+                // Add "bundle" as possible dependency plugin.
+                $facet_info[$key]['dependency plugins'][] = 'bundle';
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return $facet_info;
+}
+
+/**
+ * Implements hook_facetapi_query_types().
+ */
+function search_api_multi_facetapi_facetapi_query_types() {
+  return array(
+    'search_api_multi_term' => array(
+      'handler' => array(
+        'class' => 'SearchApiMultiFacetapiTerm',
+        'adapter' => 'search_api_multi',
+      ),
+    ),
+    'search_api_multi_date' => array(
+      'handler' => array(
+        'class' => 'SearchApiMultiFacetapiDate',
+        'adapter' => 'search_api_multi',
+      ),
+    ),
+  );
+}

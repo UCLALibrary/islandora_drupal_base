@@ -1,0 +1,14 @@
+.select2-choices,
+.select2-choice
+{
+  min-width: 230px;
+}
+.select2-drop
+{
+  min-width: 240px;
+}
+.select2-container.error
+{
+  background-image: none;
+  border: solid 1px red;
+}

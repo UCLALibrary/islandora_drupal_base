@@ -1,0 +1,231 @@
+/**
+ * @file
+ * Block Styling
+ */
+
+
+.block { /* Block wrapper */
+  margin-bottom: 1.5em;
+}
+
+.block.first { /* The first block in the region */
+}
+
+.block.last { /* The last block in the region */
+}
+
+.block.odd { /* Zebra striping for each block in the region */
+}
+
+.block.even { /* Zebra striping for each block in the region */
+}
+
+h2.block-title { /* Block title */
+	font-size: 135%;
+	font-weight: 100;
+}
+
+#header h2.block-title {
+	text-transform: uppercase;
+	font-size: 95%; letter-spacing: 1pt;
+}
+
+#block-aggregator-category-1 { /* Block for the latest news items in the first category */
+}
+
+#block-aggregator-feed-1 { /* Block for the latest news items in the first feed */
+}
+
+#block-block-1 { /* First block created with "Add block" link */
+}
+
+#block-blog-recent { /* "Recent blog posts" block */
+}
+
+#block-book-navigation { /* "Book navigation" block for the current book's table of contents */
+}
+
+#block-comment-recent { /* "Recent comments" block */
+}
+
+#block-forum-active { /* "Active forum topics" block */
+}
+
+#block-forum-new { /* "New forum topics" block */
+}
+
+#block-locale-language { /* Language switcher block */
+	float: left;
+	position: relative; top: 8px; left: 3%;
+}
+
+#block-menu-menu-NAME { /* Custom menu block */
+}
+
+#block-node-recent { /* "Recent content" block */
+}
+
+#block-node-syndicate { /* "Syndicate" block for primary RSS feed; see also page.css's .feed-icon */
+}
+
+#block-poll-recent { /* "Most recent poll" block */
+}
+
+#block-profile-author-information { /* "Author information" block for the profile of the page's author */
+}
+
+#block-search-form { /* "Search form" block */
+}
+
+#block-shortcut-shortcuts { /* "Shortcuts" block */
+}
+
+#block-statistics-popular { /* "Popular content" block */
+}
+
+#block-system-main-menu { /* "Main menu" block */
+}
+
+#block-system-management { /* "Management" block for Drupal management menu */
+}
+
+#block-system-navigation { /* "Navigation" block for Drupal navigation menu */
+}
+
+#block-system-user-menu { /* "User menu" block for Drupal user menu */
+}
+
+#block-system-help { /* "System help" block */
+}
+
+#block-system-main { /* "Main page content" block */
+}
+
+#block-system-powered-by { /* "Powered by Drupal" block */
+}
+
+#block-user-login { /* "User login form" block */
+}
+
+#block-user-new { /* "Who's new" block for a list of the newest users */
+}
+
+#block-user-online { /* "Who's online" block for a list of the online users */
+}
+
+section.sidebar h3 {
+	margin-bottom: 1em;
+}
+
+section.sidebar ul.facet-list {
+	margin-top: 0; margin-bottom: 2em;
+}
+
+
+#footer .block {
+  width: 30%;
+  float: left;
+  padding-right: 3%;
+}
+
+#block-block-7 {
+  margin-top: 35px;
+}
+
+#block-block-4 {
+  margin-top: 35px;
+}
+
+/*
+ * Menu Blocks
+ */
+
+#block-menu-block-1 {
+  float: right;
+}
+
+#block-menu-block-3 {
+  margin-top: 35px;
+  font-size: 90%;
+}
+
+
+/*
+* Islandora Blocks
+*/
+
+#block-islandora-solr-simple {
+	width: 35%; float: right;
+
+}
+
+#block-islandora-solr-simple #edit-simple {
+	display: block;
+	position: relative;
+	overflow: hidden;
+}
+
+.adv_search { display: block; margin-top: 5px; font-size: 90%; }
+
+#edit-islandora-simple-search-query {
+	width: 99%; height: 45px;
+	font-size: 165%;
+	border-radius:  5px;
+	-moz-border-radius:  5px;
+	-webkit-border-radius:  5px;
+}
+
+#islandora-solr-result-count {
+	color: #737475;
+}
+
+#block-block-2 {
+	width: 45%;
+	clear: both;
+	margin-bottom: 0;
+}
+
+	#block-block-2 h2{
+		font-family: 'Open Baskerville 0.0.53' !important;
+		font-style: italic;
+		font-weight: 100 !important;
+		font-size: 200% !important;
+		letter-spacing: 0.5pt !important;
+		text-transform: none !important;
+		height: 25px;
+		margin-left: -3px;
+	}
+
+#block-block-6 {
+	top: 75px;
+	position: absolute;
+}
+
+#block-block-6 h2 {
+		font-family: 'Open Baskerville 0.0.53';
+		font-weight: 100;
+		font-size: 300%;
+		letter-spacing: 0.5pt;
+		text-transform: none;
+		line-height: 1em;
+		margin: 0;
+}
+
+#block-block-6 h2.it {
+	font-size: 125%;
+	font-style: italic;
+	float: right;
+	margin-top: 0.3em;
+}
+
+#header #edit-submit {
+	height: 36px; width: 85px;
+	font-size: 90%;
+	position: absolute; top: 8px; right: 5px;
+		border-radius: 5px;
+		border: 1px solid #ccc;
+}
+
+.facet-list .count {
+	display: inline-block;
+}

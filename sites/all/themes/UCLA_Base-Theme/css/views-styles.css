@@ -1,0 +1,83 @@
+/**
+ * @file
+ * Views Styling
+ */
+/*
+ * Views' display styles
+ *
+ */
+/* line 14, ../sass/views-styles.scss */
+.view-frontpage .views-row {
+  max-width: 31.3%;
+  float: left;
+  background: #333;
+  padding: 0.5em 1%;
+  border-top: 5px solid #B9C2D4;
+}
+/* line 20, ../sass/views-styles.scss */
+.view-frontpage .views-row p {
+  font-size: 90%;
+  margin: 0.5em 0 1em;
+}
+/* line 24, ../sass/views-styles.scss */
+.view-frontpage .views-row li a {
+  font-size: 80%;
+}
+/* line 32, ../sass/views-styles.scss */
+.view-frontpage .attachment .views-row {
+  background: none;
+  border: none;
+  float: none;
+}
+
+/*
+ * Views' admin tabs
+ *
+ * The views admin tabs use the same classes as the secondary tabs. We prevent
+ * some of our tab styling from bleeding into (and breaking) the Views admin
+ * pages. If your sub-theme isn't used for admin pages, you can remove this
+ * entire section.
+ */
+/* line 50, ../sass/views-styles.scss */
+.views-displays .secondary li {
+  float: none;
+  margin: 0 6px 0;
+}
+/* line 56, ../sass/views-styles.scss */
+.views-displays .secondary a:link,
+.views-displays .secondary a:visited {
+  text-shadow: none;
+  padding: 2px 7px 3px;
+}
+/* line 61, ../sass/views-styles.scss */
+.views-displays .secondary .open > a {
+  -webkit-border-radius: 7px 7px 0 0;
+  -moz-border-radius: 7px 7px 0 0;
+  -ms-border-radius: 7px 7px 0 0;
+  -o-border-radius: 7px 7px 0 0;
+  border-radius: 7px 7px 0 0;
+}
+/* line 63, ../sass/views-styles.scss */
+.views-displays .secondary .open > a:hover {
+  color: #333;
+}
+/* line 68, ../sass/views-styles.scss */
+.views-displays .secondary .action-list li {
+  margin: 0;
+}
+/* line 70, ../sass/views-styles.scss */
+.views-displays .secondary .action-list li:first-child {
+  -webkit-border-radius: 0 7px 0 0;
+  -moz-border-radius: 0 7px 0 0;
+  -ms-border-radius: 0 7px 0 0;
+  -o-border-radius: 0 7px 0 0;
+  border-radius: 0 7px 0 0;
+}
+/* line 73, ../sass/views-styles.scss */
+.views-displays .secondary .action-list li:last-child {
+  -webkit-border-radius: 0 0 7px 7px;
+  -moz-border-radius: 0 0 7px 7px;
+  -ms-border-radius: 0 0 7px 7px;
+  -o-border-radius: 0 0 7px 7px;
+  border-radius: 0 0 7px 7px;
+}

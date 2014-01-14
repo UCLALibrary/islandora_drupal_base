@@ -1,0 +1,175 @@
+<?php
+
+/**
+ * Implements hook_islandora_required_objects().
+ */
+function ucla_pdf_islandora_required_objects(IslandoraTuque $connection) {
+  // module path
+  $module_path = drupal_get_path('module', 'ucla_pdf');
+
+  // UCLA PDF Content Model
+  $ucla_pdf_content_model = $connection->repository->constructObject('ucla:TahrirPdfCModel');
+  $ucla_pdf_content_model->owner = 'fedoraAdmin';
+  $ucla_pdf_content_model->label = 'UCLA PDF Content Model';
+  $ucla_pdf_content_model->models = 'fedora-system:ContentModel-3.0';
+
+  // DS-COMPOSITE-MODEL Datastream
+  $datastream = $ucla_pdf_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'X');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/ucla_pdf_ds_composite_model.xml", FALSE);
+  $ucla_pdf_content_model->ingestDatastream($datastream);
+
+  //UCLA PDF Collection
+  $ucla_pdf_collection = $connection->repository->constructObject('ucla:tahrir_pdf_collection');
+  $ucla_pdf_collection->owner = 'fedoraAdmin';
+  $ucla_pdf_collection->label = 'Tahrir PDF collection';
+  $ucla_pdf_collection->models = 'islandora:collectionCModel';
+  $ucla_pdf_collection->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:root');
+
+  // Collection Policy Datastream
+  $datastream = $ucla_pdf_collection->constructDatastream('COLLECTION_POLICY', 'X');
+  $datastream->label = 'Collection policy';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/ucla_pdf_collection_policy.xml", FALSE);
+  $ucla_pdf_collection->ingestDatastream($datastream);
+
+  // TN Datastream
+  $datastream = $ucla_pdf_collection->constructDatastream('TN', 'M');
+  $datastream->label = 'Thumbnail';
+  $datastream->mimetype = 'image/png';
+  $datastream->setContentFromFile("$module_path/images/folder.png", FALSE);
+  $ucla_pdf_collection->ingestDatastream($datastream);
+
+  return array(
+    'ucla_pdf' => array(
+      'title' => 'UCLA PDF',
+      'objects' => array(
+        $ucla_pdf_content_model,
+        $ucla_pdf_collection,
+      )
+    )
+  );
+}
+
+/**
+ * Implements hook_islandora_xml_form_builder_form_associations().
+ */
+function ucla_pdf_islandora_xml_form_builder_form_associations() {
+  return array(
+    'ucla_pdf_mods_form' => array(
+      'content_model' => 'ucla:TahrirPdfCModel',
+      'form_name' => 'UCLA PDF Mods form',
+      'dsid' => 'MODS',
+      'title_field' => array('mainTitleInfo', 'mainTitle'),
+      'transform' => 'mods_to_dc.xsl',
+      'template' => FALSE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_CMODEL_PID_islandora_object_alter().
+ *
+ * Add in islandora:sp_pdf, so it gets handled in largely the same way.
+ */
+function ucla_pdf_ucla_TahrirPdfCModel_islandora_object_alter($obj, $context) {
+  if ($context['action'] == 'ingest') {
+    $obj->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:sp_pdf');
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function ucla_pdf_menu() {
+  return array(
+    'islandora/object/%islandora_object/view_translation' => array(
+      'title' => 'Translation (English)',
+      'page callback' => 'ucla_pdf_view_translation',
+      'page arguments' => array(2, 'TRANSLATION-EN'),
+      'access callback' => 'ucla_pdf_access',
+      'access arguments' => array(2, 'TRANSLATION-EN'),
+      'type' => MENU_LOCAL_TASK,
+    ),
+    'islandora/object/%islandora_object/view_transcription' => array(
+      'title' => 'Transcription',
+      'page callback' => 'ucla_pdf_view_transcription',
+      'page arguments' => array(2, 'TRANSCRIPTION'),
+      'access callback' => 'ucla_pdf_access',
+      'access arguments' => array(2, 'TRANSCRIPTION'),
+      'type' => MENU_LOCAL_TASK,
+    ),
+      //'islandora/object/%islandora_object/view_dc' => array(
+      //  'title' => 'DC (For testing)',
+      //  'page callback' => 'ucla_pdf_view_text',
+      //  'page arguments' => array(2, 'DC'),
+      //  'access callback' => 'ucla_pdf_access',
+      //  'access arguments' => array(2, 'DC'),
+      //  'type' => MENU_LOCAL_TASK,
+      //),
+  );
+}
+
+/**
+ * Check that our streams exist, before showing the paths.
+ *
+ *  @param AbstractObject $object
+ *    Tuque object containing the datastream
+ *  @param string $dsid
+ *    The id of the datastream in the Tuque object
+ */
+function ucla_pdf_access($object = NULL, $dsid = NULL) {
+  return in_array('ucla:TahrirPdfCModel', $object->models) && isset($object[$dsid]) && islandora_object_datastream_access_callback(FEDORA_VIEW_OBJECTS, $object, $object[$dsid]);
+}
+
+/**
+ *  Page callback to view the translation of a pdf.
+ *
+ *  @param AbstractObject $object
+ *    Tuque object containing the datastream
+ *  @param string $dsid
+ *    The id of the datastream in the Tuque object containing the text
+ */
+function ucla_pdf_view_translation($object, $dsid) {
+
+  // Get the translation text from the datastrem
+  module_load_include('inc', 'ucla_pdf', 'ucla_pdf');
+  $out = ucla_pdf_format_datastream_text($object, $dsid);
+  $out = "<pre>" . $out . "</pre>";
+
+  // Add a link to download the text using Islandora's RESTful api.
+  global $base_url;
+  $download_url = $base_url . '/islandora/object/' . $object->id . '/datastream/' . $dsid . '/download';
+  $link_text = t('Download as txt');
+  $out .= "<br />" . l($link_text, $download_url, array('attributes' => array('class' => array('ucla-pdf-link'))));
+  return $out;
+}
+
+/**
+ *  Page callback to view the transcription of a pdf.
+ *
+ *  @param AbstractObject $object
+ *    Tuque object containing the datastream
+ *  @param string $dsid
+ *    The id of the datastream in the Tuque object containing the text
+ */
+function ucla_pdf_view_transcription($object, $dsid) {
+  module_load_include('inc', 'ucla_pdf', 'ucla_pdf');
+  return ucla_pdf_format_datastream_text($object, $dsid);
+}
+
+/**
+ * Implements hook_islandora_ingest_steps().
+ */
+function ucla_pdf_ucla_TahrirPdfCModel_islandora_ingest_steps() {
+  return array(
+    'ucla_pdf_file_upload' => array(
+      'weight' => 10,
+      'type' => 'form',
+      'form_id' => 'islandora_pdf_pdf_upload_form',
+      'module' => 'islandora_pdf',
+      'file' => 'includes/pdf_upload.form.inc'
+    )
+  );
+}
