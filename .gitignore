@@ -1,6 +1,10 @@
+# We're overridding the default for our base Drupal because there is some
+# settings info we want stored.  We read passwords from /etc/drupal/* so
+# the passwords aren't stored in these files that we're allowing to be stored
+
 # Ignore configuration files that may contain sensitive information.
-sites/*/settings*.php
+#sites/*/settings*.php
 
 # Ignore paths that contain user-generated content.
-sites/*/files
-sites/*/private
+#sites/*/files
+#sites/*/private
