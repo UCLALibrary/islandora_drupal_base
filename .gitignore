@@ -8,3 +8,6 @@
 # Ignore paths that contain user-generated content.
 sites/*/files
 sites/*/private
+
+# Ignore paths for the drupal subsites; these have their own repositories
+sites/islandora_drupal_subsite_*
