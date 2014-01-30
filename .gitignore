@@ -6,7 +6,7 @@
 #sites/*/settings*.php
 
 # Ignore paths that contain user-generated content.
-drupal/sites/*/files
+drupal/sites/*/files/*
 drupal/sites/*/private
 
 # Ignore paths for the drupal subsites; these have their own repositories
