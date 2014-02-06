@@ -1,0 +1,5 @@
+name = Islandora Mapping
+description = A module to display static maps for individual or multiple items based on input lat/long data
+core = 7.x
+dependencies[] = ip_geoloc
+files[] = tests/islandora_mapping.test

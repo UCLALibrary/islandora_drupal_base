@@ -1,0 +1,37 @@
+<?php
+/**
+ * @file
+ * Defines all the hooks this module implements.
+ *
+ * This module provides stub functions in order to test rendering of map 
+ * objects.
+ */
+
+/**
+ * This function provides basic page to display map div.
+ */
+function islandora_mapping_test_menu() {
+  return array(
+    'test/islandora_map_single' => array(
+      'title' => 'Islandora',
+      'page callback' => 'islandora_mapping_single_test_callback',
+      'description' => "Configure settings associated with Islandora.",
+      'access callback' => TRUE,
+      'type' => MENU_NORMAL_ITEM,
+    ),
+  );
+}
+
+/**
+ * This provides stub function  for drupal webtest purposes.
+ */
+function islandora_mapping_single_test_callback() {
+  $variables = array(
+    'latitude' => '46.25',
+    'longitude' => '63.00',
+    'div_id' => 'islandora_map_single_test',
+    'height' => '500',
+    'width' => '700',
+  );
+  return theme('islandora_mapping_map_single_item', $variables);
+}

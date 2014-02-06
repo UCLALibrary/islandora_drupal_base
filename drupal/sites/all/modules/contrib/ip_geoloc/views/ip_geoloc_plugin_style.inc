@@ -12,6 +12,7 @@
 
 // Leaflet only.
 define('IP_GEOLOC_MAP_AUTOBOX_IGNORE_VISITOR', -1);
+
 define('IP_GEOLOC_MAP_CENTER_FIXED', 0);
 define('IP_GEOLOC_MAP_CENTER_ON_FIRST_LOCATION', 1);
 define('IP_GEOLOC_MAP_CENTER_ON_VISITOR', 2);
@@ -56,7 +57,7 @@ function ip_geoloc_plugin_style_bulk_of_form($views_plugin_style, &$form, &$form
   );
   $form['ip_geoloc_views_plugin_latitude_desc'] = array(
     '#type' => 'item',
-    '#markup' => t('Select the field holding the latitude from the dropdown above.<br/><strong>Special cases</strong> If the View has relationships and lat/lon are accessed via the relationships, select <em>[Type field name]</em> and enter the field name in the additional text box presented. If you use a view based on the <strong>Location</strong> module, enter <strong>location_latitude</strong>. If the latitude is stored in a <strong>field</strong>, then enter the field\'s machine name. For instance, when using the <strong>Geofield</strong>, <strong>Geolocation field</strong> or <strong>Get Locations</strong> modules enter <strong>field_<em>yourfieldname</em></strong>. If necessary, check the <a target="_field_names" href="!url">list of all field names</a>. <br/>For IP Geolocation Views & Maps <em>visitor</em> data, enter <strong>ip_geoloc_latitude</strong>.', array(
+    '#markup' => t('Select the field holding the latitude from the dropdown above. Make sure you have added it to the Fields list of this View or it won\'t show up above.<br/><strong>Special cases</strong> If the View has relationships and lat/lon are accessed via the relationships, select <em>[Type field name]</em> and enter the field name in the additional text box presented. If you use a view based on the <strong>Location</strong> module, enter <strong>location_latitude</strong>. If the latitude is stored in a <strong>field</strong>, then enter the field\'s machine name. For instance, when using the <strong>Geofield</strong>, <strong>Geolocation field</strong> or <strong>Get Locations</strong> modules enter <strong>field_<em>yourfieldname</em></strong>. If necessary, check the <a target="_field_names" href="!url">list of all field names</a>. <br/>For IP Geolocation Views & Maps <em>visitor</em> data, enter <strong>ip_geoloc_latitude</strong>.', array(
        '!url' => url('admin/reports/fields'),
     )),
     '#weight' => 12,
@@ -887,6 +888,10 @@ function _ip_geoloc_plugin_style_set_marker_color(&$location, $row, $differentia
           $differentiator_value = $differentiator_values[$num_values - 1]['rendered']['#markup'];
         }
       }
+    }
+    elseif (isset($row->_entity_properties[$differentiator])) {
+      // Search API
+      $differentiator_value = $row->_entity_properties[$differentiator];
     }
     else {
       $differentiator_value = '';

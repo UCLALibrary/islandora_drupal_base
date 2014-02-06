@@ -1,0 +1,51 @@
+<?php
+/**
+ * @file
+ * Defines all the hooks this module implements.
+ *
+ * This module verifies that the correct code gets inserted into the DOM
+ * of the page that calls the mapping theme function.  
+ */
+
+
+/**
+ * This class verifies that the theming function is outputting the desired html
+ */
+class IslandoraMappingTestCase extends DrupalWebTestCase {
+
+  /**
+   * This function provides basic info to the drupal test class.
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Islandora Mapping',
+      'description' => 'Web test to ensure the module is outputting proper JS and markup and that map is rendering on page',
+      'group' => 'Islandora Mapping',
+    );
+  }
+
+  /**
+   * This loads the testing stub modules.
+   */
+  public function setUp() {
+    parent::setup(array(
+      'islandora_mapping_test',
+      'ip_geoloc',
+    ));
+  }
+
+  /**
+   * This function tests the rendering of a single map item.
+   */
+  public function testRenderMap() {
+    $this->drupalGet('test/islandora_map_single');
+    $this->assertResponse('200', 'test module page loaded successfully');
+    $map_node = $this->xpath("//div[@id='islandora_map_single_test']");
+    if (is_object($map_node[0])) {
+      $this->assertNotNull($map_node[0]->count(), 0, 'contains content, hooray');
+    }
+    else {
+      $this->fail("No map nodes found.", "Islandora");
+    }
+  }
+}

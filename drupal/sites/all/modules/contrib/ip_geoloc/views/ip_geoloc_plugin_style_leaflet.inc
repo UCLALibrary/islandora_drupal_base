@@ -32,7 +32,7 @@ class ip_geoloc_plugin_style_leaflet extends views_plugin_style {
     );
     $options['default_marker_color'] = array('default' => '');
     $options['default_marker_special_char'] = array('default' => '');
-    $options['center_option'] = array('default' => IP_GEOLOC_MAP_CENTER_ON_FIRST_LOCATION);
+    $options['center_option'] = array('default' => 0);
     $options['empty_map_center'] = array('default' => '');
     $options['visitor_marker_color'] = array('default' => 'none');
     // The leaflet.module default.
@@ -267,7 +267,7 @@ class ip_geoloc_plugin_style_leaflet extends views_plugin_style {
     $locations = ip_geoloc_plugin_style_extract_locations($this);
 
     $marker_color = $this->options['default_marker_color'];
-    $center_option = !isset($this->options['center_option']) ? IP_GEOLOC_MAP_CENTER_ON_FIRST_LOCATION : $this->options['center_option'];
+    $center_option = !isset($this->options['center_option']) ? 0 : $this->options['center_option'];
     $visitor_marker_color = $this->options['visitor_marker_color'];
     $cluster_radius = $this->options['cluster_radius'];
     $marker_tooltip = $this->options['tooltips']['marker_tooltip'];
@@ -431,8 +431,8 @@ class ip_geoloc_plugin_style_leaflet extends views_plugin_style {
         'type' => 'point',
         'lat' => $visitor_location['latitude'],
         'lon' => $visitor_location['longitude'],
-        'popup' => t('Your retrieved location'),
-        'tooltip' => t('Your retrieved location'),
+        'popup' => t('Your approximate location'),
+        'tooltip' => t('Your approximate location'),
         // See leaflet_markercluster.drupal.js.
         'flags' => LEAFLET_MARKERCLUSTER_EXCLUDE_FROM_CLUSTER,
       );
@@ -468,33 +468,32 @@ class ip_geoloc_plugin_style_leaflet extends views_plugin_style {
     $map_id = 'ip-geoloc-map-of-view-' . $this->view->name . '-' . $this->display->id . '-' . md5(serialize($features));
 
     drupal_add_js(drupal_get_path('module', 'leaflet') . '/leaflet.drupal.js');
-    if (!empty($has_special_markers)) {
-      drupal_add_js($module_path . '/js/ip_geoloc_leaflet_tagged_marker.js');
-      drupal_add_css($module_path . '/css/ip_geoloc_leaflet_markers.css');
-    }
     $settings = array(
       'mapId' => $map_id,
       'map' => $map,
       'features' => $features,
     );
     drupal_add_js(array('leaflet' => array($settings)), 'setting');
-    drupal_add_library('leaflet', 'leaflet');
+    libraries_load('leaflet');
+    
     // This is hacky but can't see another way to conditionally load
-    // Leaflet More Map js (for Retina support).
-    if (function_exists('leaflet_more_maps_preprocess_leaflet_map')) {
-      $vars = array();
-      leaflet_more_maps_preprocess_leaflet_map($vars);
+    // Leaflet More Map js (for Retina support and for Bing).
+    if (function_exists('leaflet_more_maps_leaflet_map_prebuild_alter')) {
+      leaflet_more_maps_leaflet_map_prebuild_alter();
     }
 
     if (!empty($cluster_radius)) {
       if (module_exists('leaflet_markercluster')) {
-        $vars = array();
-        leaflet_markercluster_preprocess_leaflet_map($vars);
+        leaflet_markercluster_leaflet_map_prebuild_alter();
       }
       else {
         $display_name = $this->view->get_human_name() . ' (' . $this->display->display_title . ')';
         drupal_set_message(t('Cannot cluster markers in View %display_name - Leaflet MarkerCluster module not enabled.', array('%display_name' => $display_name)), 'warning');
       }
+    }
+    if (!empty($has_special_markers)) {
+      drupal_add_js($module_path . '/js/ip_geoloc_leaflet_tagged_marker.js');
+      drupal_add_css($module_path . '/css/ip_geoloc_leaflet_markers.css');
     }
 
     $output = theme('ip_geoloc_leaflet', array(

@@ -1,0 +1,5 @@
+name = Islandora Mapping Test
+core = 7.x
+description = "test suite for map items"
+dependencies[] = islandora_mapping
+hidden = TRUE 

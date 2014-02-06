@@ -8,7 +8,7 @@
  */
 
 // Note: secure http was chosen, as plain http may cause warnings popping up in
-// enviroments using certificates.
+// environments using certificates.
 // Google's gears_init.js is now included at the top of geo.js
 // Size 15k uncompressed.
 define('IP_GEOLOC_GEO_JS', 'https://geo-location-javascript.googlecode.com/svn/trunk/js/geo.js');
@@ -142,12 +142,14 @@ function ip_geoloc_output_map($latitude, $longitude, $div_id = 'ip-geoloc-map', 
  * @param string $map_style
  *   CSS style applied to the div, e.g "height:200px; width:300px"
  * @param float $latitude
- *   fallback value, eg. when error or user declines to share location
+ *   if empty and HTML5 location retrieval will be initiated
  * @param float $longitude
- *   fallback value, eg. when error or user declines to share location
+ *   if empty and HTML5 location retrieval will be initiated
+ * @param string $info_text
+ *   optional string to display in the marker balloon, e.g. formatted address
  */
 function ip_geoloc_output_map_current_location($div_id = 'ip-geoloc-map-current-location',
-    $map_options = NULL, $map_style = NULL, $latitude = NULL, $longitude = NULL) {
+    $map_options = NULL, $map_style = NULL, $latitude = NULL, $longitude = NULL, $info_text = NULL) {
   $js_options = array('group' => JS_LIBRARY);
   drupal_add_js(IP_GEOLOC_GEO_JS, $js_options);
   drupal_add_js(IP_GEOLOC_GOOGLE_MAPS_GPS, $js_options);
@@ -160,6 +162,7 @@ function ip_geoloc_output_map_current_location($div_id = 'ip-geoloc-map-current-
     'ip_geoloc_current_location_map_div' => $div_id,
     'ip_geoloc_current_location_map_options' => drupal_json_decode($map_options),
     'ip_geoloc_current_location_map_latlng' => array($latitude, $longitude),
+    'ip_geoloc_current_location_map_info_text' => $info_text,
   );
   drupal_add_js($settings, 'setting');
 
@@ -323,17 +326,17 @@ function ip_geoloc_output_map_multi_location($locations, $div_id = 'ip-geoloc-ma
     'ip_geoloc_locations' => $locations,
     'ip_geoloc_multi_location_map_div' => $div_id,
     'ip_geoloc_multi_location_map_options' => drupal_json_decode($map_options),
-    'ip_geoloc_multi_location_center_option' => $center_option,
+    'ip_geoloc_multi_location_center_option' => (int)$center_option,
     'ip_geoloc_multi_location_center_latlng' => $center_latlng,
     'ip_geoloc_multi_location_visitor_marker' => $visitor_marker,
     'ip_geoloc_multi_location_visitor_location_gps' => $visitor_location_gps,
     'ip_geoloc_multi_location_marker_directory' => $marker_directory,
-    'ip_geoloc_multi_location_marker_width' => $marker_width,
-    'ip_geoloc_multi_location_marker_height' => $marker_height,
-    'ip_geoloc_multi_location_marker_anchor' => $marker_anchor,
+    'ip_geoloc_multi_location_marker_width' => (int)$marker_width,
+    'ip_geoloc_multi_location_marker_height' => (int)$marker_height,
+    'ip_geoloc_multi_location_marker_anchor' => (int)$marker_anchor,
     'ip_geoloc_multi_location_marker_default_color' => $marker_color,
   );
-  drupal_add_js($settings, 'setting');
+  drupal_add_js(array($settings), 'setting');
 
   if (!isset($map_style)) {
     $map_style = IP_GEOLOC_MAP_DIV_DEFAULT_STYLE;
@@ -358,7 +361,7 @@ function ip_geoloc_output_map_multi_location($locations, $div_id = 'ip-geoloc-ma
  * Note: will result in a HTTP error 503 when the site is in maintenance mode,
  *       as in maintenance mode menu items are not available.
  */
-function ip_geoloc_get_current_location($menu_callback = 'ip-geoloc-current-location') {
+function ip_geoloc_get_current_location($menu_callback = 'js/ip_geoloc/current_location') {
   $js_options = array('group' => JS_LIBRARY);
   // End of life for the unified geo.js library. It slows things down and
   // has become less relevant as all modern devices support the HTML5/W3C API

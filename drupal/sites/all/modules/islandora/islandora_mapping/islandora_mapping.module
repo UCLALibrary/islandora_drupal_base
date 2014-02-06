@@ -1,0 +1,55 @@
+<?php
+/**
+ * @file
+ * Defines all the hooks this module implements.
+ *
+ * This module provides theme functions to embed maps within pages.  
+ */
+
+
+/**
+ * Implements hook_theme().
+ */
+function islandora_mapping_theme() {
+  return array(
+    'islandora_mapping_map_single_item' => array(
+      'variables' => array(
+        'latitude' => NULL,
+        'longitude' => NULL,
+        'div_id' => 'islandora_mapping_map_mapper',
+        'height' => '400',
+        'width' => '600',
+      ),
+    ),
+    'islandora_mapping_map_multi_item' => array(
+      'variables' => array(
+        'locations' => array(),
+        'map_options' => NULL,
+        'map_style' => 'height:500px;width:500px;',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements wrapper to map single item.
+ */
+function theme_islandora_mapping_map_single_item(array $variables) {
+  $latitude = $variables['latitude'];
+  $longitude = $variables['longitude'];
+  $div_id = $variables['div_id'];
+  $height = $variables['height'];
+  $width = $variables['width'];
+  return ip_geoloc_output_map($latitude, $longitude, $div_id, "height: " . $height . "; width:" . $width . ";");
+}
+
+/**
+ * Implements wrapper to map multi item.
+ */
+function theme_islandora_mapping_map_multi_item(array $variables) {
+  $locations = $variables['locations'];
+  $map_options = $variables['map_options'];
+  $map_style = $variables['map_style'];
+  return ip_geoloc_output_map_multi_location($locations, 'ip-geoloc-map-multi-locations',
+    $map_options, $map_style, NULL, FALSE, 1, $center_latlng = array(0, 0), FALSE);
+}
