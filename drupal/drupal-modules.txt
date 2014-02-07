@@ -290,3 +290,4 @@ views_infinite_scroll
 views_slideshow
 views_slideshow_cycle
 views_ui
+module_filter
