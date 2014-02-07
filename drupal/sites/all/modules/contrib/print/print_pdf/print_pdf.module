@@ -228,7 +228,8 @@ function print_pdf_requirements($phase) {
           }
         }
         elseif (basename($print_pdf_pdf_tool) == 'tcpdf.php') {
-          $version = _print_pdf_tcpdf_version();
+          // $version = _print_pdf_tcpdf_version();
+          $version = '5.9.002'; // fixed in maintainer's repo but not published yet, so this hack
 
           if (version_compare($version, '5.9.001', '<')) {
             $requirements['print_pdf_tool'] = array(
