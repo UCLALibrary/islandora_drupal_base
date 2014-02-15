@@ -45,6 +45,8 @@ sed -i -e "s/${2}.library.ucla.edu/${3}.library.ucla.edu/g" $1
 
 # Changes made when converting a standalone site into a multisite
 sed -i -e 's/\/aqueduct\/sites\/default\/files\//\/aqueduct\/sites\/drupal_site_4\/files\//g' $1
+sed -i -e 's/\/sites\/default\/files\//\/sites\/drupal_site_7\/files\//g' $1
+sed -i -e 's/\/sites\/all\/themes\//\/sites\/drupal_site_7\/themes\//g' $1
 
 #
 # Output the next steps the user needs to take
