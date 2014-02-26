@@ -31,7 +31,9 @@ fi
 # Second variable set means we're installing a subsite; symlink its profile
 if [ $# -eq 2 ] ; then
   DRUPAL_SITES="$2"
-  ln -s $DRUPAL_HOME/sites/$DRUPAL_SITES/profile $DRUPAL_HOME/profiles/$DRUPAL_SITES
+  if ! [ -L $DRUPAL_HOME/profiles/$DRUPAL_SITES ]; then
+    ln -s $DRUPAL_HOME/sites/$DRUPAL_SITES/profile $DRUPAL_HOME/profiles/$DRUPAL_SITES
+  fi
 fi
 
 # Record the state of Drupal modules prior to new code update
