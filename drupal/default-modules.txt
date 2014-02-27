@@ -146,8 +146,6 @@ islandora_solr_views
 islandora_fits
 xml_form_builder
 xml_forms
-device_geolocation
-smart_ip
 htmlmail
 mailsystem
 mimemail
