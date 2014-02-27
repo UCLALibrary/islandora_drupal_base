@@ -8,6 +8,7 @@
 
 DRUPAL_SITES="default drupal_site_1 drupal_site_2 drupal_site_3 drupal_site_4 drupal_site_5 drupal_site_7"
 JENKINS_USER=devUser1
+WEB_USER=apache
 DRUPAL_HOME=/var/www/drupal
 
 # Create the module directory if it doesn't already exist
@@ -23,7 +24,7 @@ fi
 
 # Change ownership of specified files and dirs to our user
 echo "Changing ownership of ${DRUPAL_HOME}/${1} to ${JENKINS_USER}"
-sudo chown -R ${JENKINS_USER} ${DRUPAL_HOME}/${1}
+sudo chown -R ${JENKINS_USER}:${WEB_USER} ${DRUPAL_HOME}/${1}
 if [ $? -ne 0 ] ; then
   exit $?
 fi
