@@ -8,6 +8,7 @@
 
 DRUPAL_SITES="default drupal_site_1 drupal_site_2 drupal_site_3 drupal_site_4 drupal_site_5 drupal_site_7"
 JENKINS_USER=devUser1
+WEB_USER=apache
 DRUPAL_HOME=/var/www/drupal
 
 # Create the module directory if it doesn't already exist
@@ -23,7 +24,7 @@ fi
 
 # Change ownership of specified files and dirs to our user
 echo "Changing ownership of ${DRUPAL_HOME}/${1} to ${JENKINS_USER}"
-sudo chown -R ${JENKINS_USER} ${DRUPAL_HOME}/${1}
+sudo chown -R ${JENKINS_USER}:${WEB_USER} ${DRUPAL_HOME}/${1}
 if [ $? -ne 0 ] ; then
   exit $?
 fi
@@ -31,7 +32,9 @@ fi
 # Second variable set means we're installing a subsite; symlink its profile
 if [ $# -eq 2 ] ; then
   DRUPAL_SITES="$2"
-  ln -s $DRUPAL_HOME/sites/$DRUPAL_SITES/profile $DRUPAL_HOME/profiles/$DRUPAL_SITES
+  if ! [ -L $DRUPAL_HOME/profiles/$DRUPAL_SITES ]; then
+    ln -s $DRUPAL_HOME/sites/$DRUPAL_SITES/profile $DRUPAL_HOME/profiles/$DRUPAL_SITES
+  fi
 fi
 
 # Record the state of Drupal modules prior to new code update

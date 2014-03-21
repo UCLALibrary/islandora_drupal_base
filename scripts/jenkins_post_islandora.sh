@@ -20,11 +20,11 @@ find /var/www/drupal -name files | xargs sudo chown -R apache:apache
 # Reinstate original state of Drupal modules
 for SITE in ${DRUPAL_SITES}
 do
-  drush -y --root=${DRUPAL_HOME} -l ${SITE} fr-all --force
+  drush --verbose -y --root=${DRUPAL_HOME} -l ${SITE} en `cat ${DRUPAL_HOME}/${SITE}-modules.txt`
   if [ $? -ne 0 ] ; then
     exit $?
   fi
-  drush -y --root=${DRUPAL_HOME} -l ${SITE} en `cat ${DRUPAL_HOME}/${SITE}-modules.txt`
+  drush -y --root=${DRUPAL_HOME} -l ${SITE} fr-all --force
   if [ $? -ne 0 ] ; then
     exit $?
   fi
