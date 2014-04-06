@@ -75,7 +75,6 @@ devel_node_access
 nodequeue_generate
 defaultcontent
 features
-mods_basic_image
 fe_block
 fe_nodequeue
 fe_profile
