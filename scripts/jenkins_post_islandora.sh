@@ -24,6 +24,7 @@ do
   if [ $? -ne 0 ] ; then
     exit $?
   fi
+  drush -y --root=${DRUPAL_HOME} -l ${SITE} en features
   drush -y --root=${DRUPAL_HOME} -l ${SITE} fr-all --force
   if [ $? -ne 0 ] ; then
     exit $?
