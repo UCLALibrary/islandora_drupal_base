@@ -205,7 +205,6 @@ insert
 internal_nodes
 ip_geoloc
 islandora_sync
-islandora_sync_field_collection
 islandora_sync_relation
 job_scheduler
 job_scheduler_trigger
