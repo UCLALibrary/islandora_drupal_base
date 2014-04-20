@@ -5,6 +5,45 @@
  */
 
 /**
+ * Decides which derivative function to call and runs it.
+ *
+ * @param AbstractObject $object
+ *   The object to run the derivative function for.
+ * @param string $dsid
+ *   The DSID to run the derivative function for.
+ */
+function islandora_run_derivatives(AbstractObject $object, $dsid) {
+  $batch_array = batch_get();
+  if (empty($batch_array)) {
+    $logging_results = islandora_do_derivatives($object, array(
+      'source_dsid' => $dsid,
+    ));
+    islandora_derivative_logging($logging_results);
+  }
+  else {
+    batch_set(
+      // Title won't show for batch in a batch.
+      array(
+        'init_message' => t('Preparing derivatives for @label', array('@label' => $object->label)),
+        'error_message' => t('An error occured creating derivatives.'),
+        'progress_message' => t(
+          'Creating derivatives for @label <br/>Time elapsed: @elapsed <br/>
+            Estimated time remaining @estimate.',
+          array('@label' => $object->label)
+        ),
+        'file' => drupal_get_path('module', 'islandora') . '/includes/regenerate_derivatives.form.inc',
+        'operations' => islandora_do_batch_derivatives(
+          $object,
+          array(
+            'source_dsid' => $dsid,
+          )
+        ),
+      )
+    );
+  }
+}
+
+/**
  * Kicks off derivative functions based upon hooks and conditions.
  *
  * @param AbstractObject $object
@@ -41,20 +80,7 @@ function islandora_do_derivatives(AbstractObject $object, array $options) {
   $hooks = islandora_invoke_hook_list(ISLANDORA_DERVIATIVE_CREATION_HOOK, $object->models, array($object));
   uasort($hooks, 'drupal_sort_weight');
   $results = array();
-
-  if (array_key_exists('source_dsid', $options)) {
-    $hooks = array_filter($hooks, function($filter_hook) use($options) {
-      return array_key_exists('source_dsid', $filter_hook) &&
-      $filter_hook['source_dsid'] == $options['source_dsid'];
-    });
-  }
-
-  if (array_key_exists('destination_dsid', $options)) {
-    $hooks = array_filter($hooks, function($filter_hook) use($options) {
-      return array_key_exists('destination_dsid', $filter_hook) &&
-      $filter_hook['destination_dsid'] == $options['destination_dsid'];
-    });
-  }
+  $hooks = islandora_filter_derivatives($hooks, $options, $object);
 
   foreach ($hooks as $hook) {
     if (isset($hook['file'])) {
@@ -62,7 +88,7 @@ function islandora_do_derivatives(AbstractObject $object, array $options) {
     }
     foreach ($hook['function'] as $function) {
       if (function_exists($function)) {
-        $logging = call_user_func($function, $object, $options['force']);
+        $logging = call_user_func($function, $object, $options['force'], $hook);
         if (!empty($logging)) {
           $results[] = $logging;
         }
@@ -120,4 +146,99 @@ function islandora_derivative_logging(array $logging_results) {
       }
     }
   }
+}
+
+/**
+ * Kicks off derivative functions based upon hooks and conditions.
+ *
+ * @param AbstractObject $object
+ *   An AbstractObject representing a FedoraObject.
+ * @param array $options
+ *   An array of parameters containing:
+ *   - force: Bool denoting whether we are forcing the generation of
+ *     derivatives.
+ *   - source_dsid: (Optional) String of the datastream id we are generating
+ *     from or NULL if it's the object itself.
+ *   - destination_dsid: (Optional) String of the datastream id that is being
+ *     created. To be used in the UI.
+ *
+ * @return array
+ *   An array of operations to be called from within a batch.
+ */
+function islandora_do_batch_derivatives(AbstractObject $object, array $options) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $options += array(
+    'force' => FALSE,
+  );
+  $hooks = islandora_invoke_hook_list(ISLANDORA_DERVIATIVE_CREATION_HOOK, $object->models, array($object));
+  uasort($hooks, 'drupal_sort_weight');
+  $operations = array();
+
+  $hooks = islandora_filter_derivatives($hooks, $options, $object);
+  foreach ($hooks as $hook) {
+    $file = FALSE;
+    if (isset($hook['file'])) {
+      $file = $hook['file'];
+    }
+    foreach ($hook['function'] as $function) {
+      $operations[] = array(
+        'islandora_derivative_perform_batch_operation',
+        array(
+          $function,
+          $file,
+          $object->id,
+          $options['force'],
+          $hook,
+        ),
+      );
+    }
+  }
+  return $operations;
+}
+
+/**
+ * Filter the derivative functions to only call those which are valid.
+ *
+ * @param array $hooks
+ *   An array of hooks to be filtered depending on options.
+ * @param array $options
+ *   An array of options for the derivative generation.
+ * @param AbstractObject $object
+ *   An AbstractObject representing an object within Fedora.
+ *
+ * @return array
+ *   Returns the filtered array of hooks to be ran.
+ */
+function islandora_filter_derivatives($hooks, $options, AbstractObject $object) {
+  if (array_key_exists('source_dsid', $options)) {
+    $hooks = array_filter($hooks, function ($filter_hook) use ($options) {
+      return array_key_exists('source_dsid', $filter_hook) &&
+      $filter_hook['source_dsid'] == $options['source_dsid'];
+    });
+  }
+  if (array_key_exists('destination_dsid', $options)) {
+    $hooks = array_filter($hooks, function ($filter_hook) use ($options) {
+      return array_key_exists('destination_dsid', $filter_hook) &&
+      $filter_hook['destination_dsid'] == $options['destination_dsid'];
+    });
+  }
+  // Do a final filtering to make sure that the source DSID exists on the object
+  // where needed. Using a defined function as opposed to the way above as
+  // it seems to break PHPCS as of 1.4.8.
+  $filter_function = function ($filter_hook) use ($object) {
+    $to_return = FALSE;
+    if (array_key_exists('source_dsid', $filter_hook)) {
+      if ($filter_hook['source_dsid'] != NULL) {
+        if (isset($object[$filter_hook['source_dsid']])) {
+          $to_return = TRUE;
+        }
+      }
+      else {
+        $to_return = TRUE;
+      }
+    }
+    return $to_return;
+  };
+  $hooks = array_filter($hooks, $filter_function);
+  return $hooks;
 }

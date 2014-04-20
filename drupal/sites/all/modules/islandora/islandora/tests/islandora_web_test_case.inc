@@ -8,6 +8,18 @@
 class IslandoraWebTestCase extends DrupalWebTestCase {
 
   /**
+   * An array of users that may be created over the course of a test.
+   *
+   * @var array
+   */
+  protected $users = array();
+
+  /**
+   * By default, deleteUserCreatedObjects() runs on each tearDown() step.
+   */
+  protected $deleteObjectsOnTeardown = TRUE;
+
+  /**
    * Sets up the Drupal filter to access this test Drupal instances database.
    *
    * @see DrupalWebTestCase::setUp()
@@ -131,6 +143,7 @@ class IslandoraWebTestCase extends DrupalWebTestCase {
     }
     else {
       parent::drupalLogin($account);
+      $this->users[] = $account->name;
     }
   }
 
@@ -152,9 +165,18 @@ class IslandoraWebTestCase extends DrupalWebTestCase {
   /**
    * Restores the original Drupal filter, frees any allocated resources.
    *
+   * To safeguard against leaving test objects in the repository, tearDown()
+   * calls deleteUserCreatedObjects() every time by default. This feature can be
+   * toggled by setting $this->deleteObjectsOnTeardown to TRUE or FALSE.
+   *
    * @see DrupalWebTestCase::tearDown()
    */
   public function tearDown() {
+    if ($this->deleteObjectsOnTeardown) {
+      foreach ($this->users as $user) {
+        $this->deleteUserCreatedObjects($user);
+      }
+    }
     if ($this->configuration['use_drupal_filter']) {
       $this->restoreDrupalFilter();
     }
@@ -170,56 +192,90 @@ class IslandoraWebTestCase extends DrupalWebTestCase {
    *   The PID of the object
    * @param array $datastreams
    *   An array of strings containing datastream names
+   *
+   * @return bool
+   *   TRUE on success, FALSE on fail.
    */
   public function assertDatastreams($object, array $datastreams) {
     if (!is_object($object)) {
       $this->fail("Failed. Object passed in is invalid.", 'Islandora');
     }
     else {
-      foreach ($datastreams as $datastream) {
-        if (isset($object[$datastream])) {
-          $this->pass("Loaded datastream {$datastream} from PID {$object->id}.", 'Islandora');
-        }
-        else {
-          $this->fail("Failed to load datastream {$datastream} from PID {$object->id}.", 'Islandora');
-        }
+      $missing_datastreams = array_diff_key(array_flip($datastreams), $this->admin->repository->api->a->listDatastreams($object->id));
+
+      if (!empty($missing_datastreams)) {
+        $this->fail("Failed to find datastream(s) " . implode(', ', array_flip($missing_datastreams)) . " in object {$object->id}.");
+        return FALSE;
       }
+
+      $this->pass("Found required datastream(s) in object {$object->id}");
+      return TRUE;
     }
   }
 
   /**
    * Attempts to validate an array of datastreams, generally via binary checks.
    *
-   * These functions exist in, and can be added to, datastream_validators.inc,
-   * which is found in this folder.
+   * Datastream validation classes exist in, and can be added to, the file
+   * 'datastream_validators.inc', which is found in this folder. Datastream
+   * validator classes use the naming convention 'PrefixDatastreamValidator',
+   * and that 'Prefix' is what this function uses to determine what class to
+   * instantiate.
    *
-   * $param AbstractObject $object
+   * $param IslandoraFedoraObject $object
    *   The object to load datastreams from.
    * $param array $datastreams
-   *   An array of paired DSIDs, validate function names, and optional params.
+   *   An array of arrays that pair DSIDs, DatastreamValidator class prefixes,
+   *   and optional params. You can check some of the existing implementations
+   *   for examples.
    */
   public function validateDatastreams($object, array $datastreams) {
+
     if (!is_object($object)) {
-      $this->fail("Failed. Object passed in is invalid.", 'Islandora');
+      $this->fail("Datastream validation failed; Object passed in is invalid.", 'Islandora');
+      return;
     }
+
     module_load_include('inc', 'islandora', 'tests/datastream_validators');
+
     foreach ($datastreams as $datastream) {
-      if (isset($object[$datastream[0]])) {
-        $function = 'islandora_validate_' . $datastream[1] . '_datastream';
-        if (function_exists($function)) {
-          if (isset($datastream[2])) {
-            $results = $function($object, $datastream[0], $datastream[2]);
-          }
-          else {
-            $results = $function($object, $datastream[0]);
-          }
-          foreach ($results as $result) {
-            $this->assertTrue($result[0], $result[1], 'Islandora');
-          }
+      // Let's give them conventional names.
+      $dsid = $datastream[0];
+      $prefix = $datastream[1];
+      $params = array();
+      if (isset($datastream[2])) {
+        $params = $datastream[2];
+      }
+
+      // Legacy tests were created before the CamelCase conventions of the class
+      // system now in place. So, we need to automagically seek out prefixes
+      // that start with a lower-case letter and convert them to the proper
+      // format (rather than fixing every single legacy test).
+      if (ctype_lower(substr($prefix, 0, 1))) {
+        // Handle the case where the prefix is "image".
+        if ($prefix === 'image') {
+          $prefix = 'Image';
         }
+        // Handle the case where the prefix is "text".
+        elseif ($prefix === 'text') {
+          $prefix = 'Text';
+        }
+        // All other cases involve just converting everything to caps.
         else {
-          $this->fail("No {$datastream[0]} validation function exists for the {$datastream[1]} datastream.", 'Islandora');
+          $prefix = strtoupper($prefix);
         }
+      }
+
+      // Instantiate the appropriate class, and grab the results.
+      $class_name = "{$prefix}DatastreamValidator";
+      if (class_exists($class_name)) {
+        $validator = new $class_name($object, $dsid, $params);
+        foreach ($validator->getResults() as $result) {
+          $this->assert($result->getType(), $result->getMessage(), 'Islandora', $result->getCaller());
+        }
+      }
+      else {
+        $this->fail("No DatastreamValidator class was found with the name '$class_name'; are you sure the prefix given to IslandoraWebTestCase->validateDatastreams() was entered correctly, or that such a validator exists?", 'Islandora');
       }
     }
   }
@@ -254,22 +310,29 @@ class IslandoraWebTestCase extends DrupalWebTestCase {
    *   The PID of the collection to be deleted
    * @param string $button
    *   The label of the first 'Delete' button
+   * @param bool $safety
+   *   If TRUE, this will only delete objects owned by users in $this->users.
    */
-  public function deleteObject($pid, $button = NULL) {
-    $path = 'islandora/object/' . $pid . '/manage/properties';
-    $edit = array();
-    if (isset($button)) {
-      $this->drupalPost($path, $edit, $button);
+  public function deleteObject($pid, $button = NULL, $safety = TRUE) {
+    $object = islandora_object_load($pid);
+    if (!$safety || in_array($object->owner, $this->users)) {
+      $path = "islandora/object/$pid/manage/properties";
+      if (isset($button)) {
+        $this->drupalPost($path, array(), $button);
+      }
+      else {
+        $object = islandora_object_load($pid);
+        $this->drupalPost($path, array(), "Permanently remove '{$object->label}' from repository");
+      }
+      $this->drupalPost($this->url, array(), t('Delete'));
+
+      $this->drupalGet("islandora/object/$pid");
+      $this->assertResponse(404, "Object $pid successfully deleted.");
     }
     else {
-      $object = islandora_object_load($pid);
-      $this->drupalPost($path, $edit, "Permanently remove '{$object->label}' from repository");
+      $this->fail("Cannot delete object {$pid}; it is owned by non-test user {$object->owner}, and this function was called with the safety on.");
+      return FALSE;
     }
-    $this->drupalPost($this->url, $edit, t('Delete'));
-    $object = islandora_object_load($pid);
-
-    $this->drupalGet("islandora/object/$pid");
-    $this->assertResponse(404, "Object $pid successfully deleted.");
   }
 
   /**
@@ -282,8 +345,11 @@ class IslandoraWebTestCase extends DrupalWebTestCase {
    *   An array containing object information using these keys:
    *   'label' - The object label; randomized if not set.
    *   'pid' - 'namespace:pid', or just 'namespace' to generate the suffix.
-   *   'models' - An array that can contain multiple content model PIDs.
-   *   'owner' - The object's owner.
+   *   'models' - An array that can contain multiple content model PIDs, or a
+   *   string containing a single content model PID.
+   *   'owner' - The object's owner. Defaults to the currently logged-in user,
+   *   if available. It is recommended to set this to a value that can be found
+   *   in $this->users; otherwise, this object will have to be manually deleted.
    *   'parent' - The PID of the parent collection.
    * @param array $datastreams
    *   An array containing zero or more datastream arrays that use the keys:
@@ -296,8 +362,7 @@ class IslandoraWebTestCase extends DrupalWebTestCase {
    *   FALSE if the object ingest failed, or the object array if successful.
    */
   public function ingestConstructedObject(array $properties = array(), array $datastreams = array()) {
-    module_load_include('inc', 'islandora', 'includes/tuque');
-    $tuque = new IslandoraTuque();
+    $tuque = islandora_get_tuque_connection($this->admin);
     $repository = $tuque->repository;
     if (!isset($properties['pid'])) {
       $properties['pid'] = "islandora";
@@ -316,14 +381,18 @@ class IslandoraWebTestCase extends DrupalWebTestCase {
     if (isset($properties['owner'])) {
       $object->owner = $properties['owner'];
     }
-
-    if (isset($properties['models']) && is_array($properties['models'])) {
-      foreach ($properties['models'] as $model) {
-        $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', $model);
-      }
+    elseif ($this->loggedInUser !== FALSE) {
+      $object->owner = $this->loggedInUser->name;
     }
-    elseif (isset($properties['models']) && !is_array($properties['models'])) {
-      $this->fail(t("'models' key of properties variable is not an array. Content model(s) will not be set."), 'Islandora');
+
+    if (isset($properties['models'])) {
+      try {
+        $object->models = (array) $properties['models'];
+      }
+      catch (Exception $e) {
+        $this->fail("Encountered an exception when trying to add content models to {$object->id}: $e");
+        return FALSE;
+      }
     }
 
     $repository->ingestObject($object);
@@ -365,6 +434,171 @@ class IslandoraWebTestCase extends DrupalWebTestCase {
     }
 
     return $object;
+  }
+
+  /**
+   * Deletes all objects created by the given user.
+   *
+   * To safeguard against leaving test objects in the repository, this is called
+   * each time DrupalTestCase::run() calls tearDown(). This feature can be
+   * toggled by setting $this->deleteObjectsOnTeardown to TRUE or FALSE.
+   *
+   * @param object $username
+   *   The user whose objects we'd like to remove.
+   *
+   * @return bool
+   *   TRUE on success, FALSE on failure.
+   */
+  public function deleteUserCreatedObjects($username) {
+    if ($username === $this->configuration['admin_user']) {
+      $this->fail("This function will under no circumstance attempt deletion of all objects owned by the configured Fedora admin user ({$this->configuration['admin_user']}), as this could irreparably damage the repository.", 'Islandora');
+      return FALSE;
+    }
+
+    $query = <<<QUERY
+SELECT ?object FROM <#ri> WHERE
+{
+  ?object <fedora-model:ownerId> "$username"
+}
+QUERY;
+
+    $objects = $this->admin->repository->ri->sparqlQuery($query);
+    foreach ($objects as $object) {
+      $loaded_object = islandora_object_load($object['object']['value']);
+      islandora_delete_object($loaded_object);
+      if ($this->assertFalse(islandora_object_load($object['object']['value']), "Object {$object['object']['value']} successfully removed from repository.", 'Islandora')) {
+        return FALSE;
+      }
+      return TRUE;
+    }
+  }
+
+  /**
+   * These are a few quick helper functions to fill in a gap in the standard
+   * DrupalWebTestCase where no function exists to test for the simple existence
+   * or non-existence of an error.
+   */
+
+  /**
+   * Asserts that an error is found in $this->content.
+   *
+   * @param string $message
+   *   The message to pass on to the results.
+   * @param string $group
+   *   The group to place the result in.
+   *
+   * @return bool
+   *   TRUE on success, FALSE on failure.
+   */
+  public function assertError($message = '', $group = 'Other') {
+    if (!$message) {
+      $message = "Error found on current page when error was expected.";
+    }
+    return $this->assertRaw("<div class=\"messages error\">", $message, $group);
+  }
+
+  /**
+   * Asserts that no error is found in $this->content.
+   *
+   * @param string $message
+   *   The message to pass on to the results.
+   * @param string $group
+   *   The group to place the result in.
+   *
+   * @return bool
+   *   TRUE on success, FALSE on failure.
+   */
+  public function assertNoError($message = '', $group = 'Other') {
+    if (!$message) {
+      $message = "No error found on current page when no error was expected.";
+    }
+    return $this->assertNoRaw("<div class=\"messages error\">", $message, $group);
+  }
+
+  /**
+   * Asserts that a warning is found in $this->content.
+   *
+   * @param string $message
+   *   The message to pass on to the results.
+   * @param string $group
+   *   The group to place the result in.
+   *
+   * @return bool
+   *   TRUE on success, FALSE on failure.
+   */
+  public function assertWarning($message = '', $group = 'Other') {
+    if (!$message) {
+      $message = "Warning found on current page when warning was expected.";
+    }
+    return $this->assertRaw("<div class=\"messages warning\">", $message, $group);
+  }
+
+  /**
+   * Asserts that no warning is found in $this->content.
+   *
+   * @param string $message
+   *   The message to pass on to the results.
+   * @param string $group
+   *   The group to place the result in.
+   *
+   * @return bool
+   *   TRUE on success, FALSE on failure.
+   */
+  public function assertNoWarning($message = '', $group = 'Other') {
+    if (!$message) {
+      $message = "No warning found on current page when no warning was expected.";
+    }
+    return $this->assertNoRaw("<div class=\"messages error\">", $message, $group);
+  }
+
+  /**
+   * Makes a drupalPost() request, using the form submit button's ID.
+   *
+   * Because drupalPost() is silly and doesn't let us choose which button we'd
+   * like to select if multiple buttons have the same value, this function
+   * allows us to select whatever button we'd like based on the ID instead.
+   *
+   * This is done via the absolutely hilarious method of fudging the actual
+   * button labels that don't have the ID we want, so that the only one left
+   * with the correct label is the one with the right ID.
+   *
+   * @see DrupalWebTestCase::drupalPost()
+   *
+   * @param string $path
+   *   Location of the post form.
+   * @param array $edit
+   *   Field data in an associative array.
+   * @param string $submit
+   *   Value of the submit button whose click is to be emulated.
+   * @param string $id
+   *   ID of the submit button whose click is to be emulated.
+   * @param array $options
+   *   Options to be forwarded to url().
+   * @param array $headers
+   *   An array containing additional HTTP request headers, each formatted as
+   *   "name: value".
+   * @param null $form_html_id
+   *   (optional) HTML ID of the form to be submitted.
+   * @param null $extra_post
+   *   (optional) A string of additional data to append to the POST submission.
+   *
+   * @return bool|string
+   *   The content from the POST request's curlExec, or FALSE on fail.
+   */
+  public function drupalPostByID($path, $edit, $submit, $id, array $options = array(), array $headers = array(), $form_html_id = NULL, $extra_post = NULL) {
+    $buttons = $this->xpath("//input[@type=\"submit\" and @value=\"{$submit}\"]");
+    if (empty($buttons)) {
+      $this->fail("No buttons found on the page with value '$submit'");
+      return FALSE;
+    }
+    $i = 0;
+    foreach ($buttons as $button) {
+      if ($button['id'] !== $id) {
+        $button['value'] .= "_$i";
+        $i++;
+      }
+    }
+    return $this->drupalPost($path, $edit, $submit, $options, $headers, $form_html_id, $extra_post);
   }
 
 }
