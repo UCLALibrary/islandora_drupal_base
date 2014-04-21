@@ -41,7 +41,7 @@ class DOIImporter extends ScholarBatchImporter {
         'textarea' => array(
           '#type' => 'textarea',
           '#title' => t('DOIs'),
-          '#description' => t('Provide a list Digital Object Identifiers (DOI) - eg. 10.1016/j.jorganchem.2011.11.018, 10.1016/j.tiv.2011.10.017, 10.1111/j.1540-4560.2012.01733.x '),
+          '#description' => t('Provide a list Digital Object Identifiers (DOI) - eg. 10.1016/j.jorganchem.2011.11.018, 10.1016/j.tiv.2011.10.017, 10.1111/j.1540-4560.2012.01733.x'),
         ),
         'ids' => array(
           '#type' => 'value',
@@ -114,7 +114,7 @@ class DOIImportObject extends IslandoraImportObject {
     $id = array_shift($ids);
 
     $openurl = variable_get('doi_importer_openurl', 'http://www.crossref.org/openurl');
-    $openurl_pid = variable_get('doi_importer_openurl_pid', 'zac@yesguy.biz');
+    $openurl_pid = variable_get('doi_importer_openurl_pid', 'user@example.com');
     $url = url($openurl, array(
              'query' => array(
                'noredirect' => 'true',

@@ -595,6 +595,9 @@ class csl_name extends csl_format {
       if (isset($name->given)) {
         $given = $this->format($name->given, 'given');
       }
+      else {
+        $given = '';
+      }
       if(isset($name->family)) {
         $name->family = $this->format($name->family, 'family');
         if ($this->form == 'short') {
@@ -931,7 +934,6 @@ class csl_date extends csl_format {
     $date_parts = array();
     $date = '';
     $text = '';
-
     if (($var = $this->variable) && isset($data->{$var})) {
       $date = $data->{$var}->{'date-parts'}[0];
       foreach ($this->elements as $element) {

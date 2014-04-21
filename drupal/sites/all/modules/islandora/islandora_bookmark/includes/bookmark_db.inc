@@ -22,7 +22,7 @@ class BookmarkDatabase extends Bookmark {
   );
 
   /**
-   * Constructor for the Bookmark object.
+   * Constructor for the BookmarkDatabase object.
    */
   public function __construct($list_id) {
     parent::__construct($list_id, NULL, NULL);
@@ -173,7 +173,7 @@ class BookmarkDatabase extends Bookmark {
       global $user;
       $owner = $user;
     }
-
+    drupal_alter(ISLANDORA_BOOKMARK_DATABASE_LIST_CREATION_HOOK, $name, $type, $owner);
     $fields = array(
       'listname' => $name,
       'listowner' => $owner->uid,

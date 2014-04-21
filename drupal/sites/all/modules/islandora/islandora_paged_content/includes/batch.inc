@@ -136,7 +136,7 @@ function islandora_paged_content_create_pdf_batch(AbstractObject $paged_content,
     'finished' => 'islandora_paged_content_batch_finished',
     'title' => t('Creating PDF from @label ...', array('@label' => $paged_content->label)),
     'init_message' => t('Preparing to create PDF from @label ...', array('@label' => $paged_content->label)),
-    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaning @estimate.'),
+    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaining @estimate.'),
     'error_message' => t('An error has occurred.'),
     'file' => drupal_get_path('module', 'islandora_paged_content') . '/includes/batch.inc',
   );
@@ -220,7 +220,7 @@ function islandora_paged_content_create_ocr_batch(AbstractObject $paged_content,
     'finished' => 'islandora_paged_content_batch_finished',
     'title' => t('Performing OCR on @label ...', array('@label' => $paged_content->label)),
     'init_message' => t('Preparing to perform OCR on @label ...', array('@label' => $paged_content->label)),
-    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaning @estimate.'),
+    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaining @estimate.'),
     'error_message' => t('An error has occurred.'),
     'file' => drupal_get_path('module', 'islandora_paged_content') . '/includes/batch.inc',
   );
@@ -269,7 +269,7 @@ function islandora_paged_content_create_images_batch(AbstractObject $paged_conte
     'finished' => 'islandora_paged_content_batch_finished',
     'title' => t('Creating Images for @label ...', array('@label' => $paged_content->label)),
     'init_message' => t('Preparing to create images for @label ...', array('@label' => $paged_content->label)),
-    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaning @estimate.'),
+    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaining @estimate.'),
     'error_message' => t('An error has occurred.'),
     'file' => drupal_get_path('module', 'islandora_paged_content') . '/includes/batch.inc',
   );
@@ -324,7 +324,7 @@ function islandora_paged_content_sequence_pages_batch(AbstractObject $paged_cont
     'finished' => 'islandora_paged_content_batch_finished',
     'title' => t("Sequencing @label's pages ...", array('@label' => $paged_content->label)),
     'init_message' => t("Preparing to sequence @label's pages ...", array('@label' => $paged_content->label)),
-    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaning @estimate.'),
+    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaining @estimate.'),
     'error_message' => t('An error has occurred.'),
     'file' => drupal_get_path('module', 'islandora_paged_content') . '/includes/batch.inc',
   );
@@ -346,6 +346,11 @@ function islandora_paged_content_sequence_pages_batch_operation($paged_content_i
   $page = islandora_paged_content_start_batch_operation($pages, $context);
   if ($page) {
     $page = islandora_object_load($page);
+    // Change the label of the page to the sequence number if variable is set.
+    if (variable_get('islandora_paged_content_page_label', FALSE)) {
+      $page->label = $context['sandbox']['progress'] + 1;
+    }
+
     // Pages are offset from 1 rather than 0.
     islandora_paged_content_set_relationship($page->relationships, ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', $context['sandbox']['progress'] + 1, TRUE);
     // Assume it worked.
@@ -380,7 +385,7 @@ function islandora_paged_content_delete_pages_batch(AbstractObject $paged_conten
     'finished' => 'islandora_paged_content_batch_finished',
     'title' => t('Deleting page(s) from @label ...', array('@label' => $paged_content->label)),
     'init_message' => t('Preparing to delete page(s) from @label ...', array('@label' => $paged_content->label)),
-    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaning @estimate.'),
+    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaining @estimate.'),
     'error_message' => t('An error has occurred.'),
     'file' => drupal_get_path('module', 'islandora_paged_content') . '/includes/batch.inc',
   );

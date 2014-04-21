@@ -1,53 +1,48 @@
-BUILD STATUS
-------------
-Current build status:
-[![Build Status](https://travis-ci.org/Islandora/islandora_solution_pack_compound.png?branch=7.x)](https://travis-ci.org/Islandora/islandora_solution_pack_compound)
+# Compound Object Solution Pack [![Build Status](https://travis-ci.org/Islandora/islandora_solution_pack_compound.png?branch=7.x)](https://travis-ci.org/Islandora/islandora_solution_pack_compound)
 
-CI Server:
-http://jenkins.discoverygarden.ca
+## Introduction
 
-CONTENTS OF THIS FILE
----------------------
-
- * summary
- * requirements
- * installation
- * configuration
- * customization
+The Islandora Compound Object Solution Pack enables generic parent-child relationships between objects. The object view of a compound object is replaced by the view of its first child object. The included "Islandora Compound Object Navigation" block provides a thumbnail navigation of an object's siblings. A "Compound" management tab allows for the addition and removal of parent and child objects for each object.
 
 
-SUMMARY
--------
+## Installation
 
-The Islandora Compound Object Solution Pack enables generic parent-child relationships between objects. The object view
-of a compound object is replaced by the view of its first child object. The included "Islandora Compound Object
-Navigation" block provides a thumbnail navigation of an object's siblings. A "Compound" management tab allows for the
-addition and removal of parent and child objects for each object.
+Install as usual, see [this](https://drupal.org/documentation/install/modules-themes/modules-7) for further information.
 
-REQUIREMENTS
-------------
+## Configuration
 
-Islandora 7.x is required to use the Islandora Compound Object Solution Pack.
+Set the 'Child releationship predicate' and 'Solr filter query', as well as select options in Administration » Islandora » Solution pack configuration » Compound Object Solution Pack (admin/islandora/solution_pack_config/compound_object).
 
-INSTALLATION
-------------
+![Configuration](https://camo.githubusercontent.com/6862e3106b3ec20c7ad08ec8334f521a569e8bff/687474703a2f2f692e696d6775722e636f6d2f6758394b48754d2e706e67)
 
-Enable the module and if the navigation controls are desired, enable and configure the "Islandora Compound Object
-Navigation" block at /admin/structure/block.
+**Block**:
 
-CONFIGURATION
--------------
+Enable the module and if the navigation controls are desired, enable and configure the "Islandora Compound Object Navigation" block at /admin/structure/block.
 
-The module has documented configuration options at admin/islandora/compound_object.
+**Theme**:
 
-CUSTOMIZATION
--------------
+The "Islandora Compound Object Navigation" block can be themed. See `theme_islandora_compound_prev_next()`.
 
-The "Islandora Compound Object Navigation" block can be themed. See theme_islandora_compound_prev_next().
+**Drush**:
 
-DRUSH
--------------
+A Drush command has been added, to be run from the command line (Terminal), that will update the existing rel-predicate of existing compound objects to `isConstituentOf`. It can be run with the drush command `drush update_rels_predicate`. This command accpets no arguments.
 
-A Drush command has been added, to be run from the command line (Terminal), that will update the existing rel-predicate of
-existing compound objects to 'isConstituentOf'. It can be run with the drush command 'drush update_rels_predicate'. This command 
-accpets no arguments.
+## Troubleshooting/Issues
+
+Having problems or solved a problem? Check out the Islandora google groups for a solution.
+
+* [Islandora Group](https://groups.google.com/forum/?hl=en&fromgroups#!forum/islandora)
+* [Islandora Dev Group](https://groups.google.com/forum/?hl=en&fromgroups#!forum/islandora-dev)
+
+## Maintainers/Sponsors
+Current maintainers:
+
+* [Alan Stanley](https://github.com/ajstanley)
+
+## Development
+
+If you would like to contribute to this module, please check out our helpful [Documentation for Developers](https://github.com/Islandora/islandora/wiki#wiki-documentation-for-developers) info, as well as our [Developers](http://islandora.ca/developers) section on the Islandora.ca site.
+
+## License
+
+[GPLv3](http://www.gnu.org/licenses/gpl-3.0.txt)

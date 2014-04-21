@@ -27,12 +27,17 @@ function islandora_bookmark_get_user_owned_bookmarks() {
   }
 
   // User is anon, use session as well.
-  if (isset($_SESSION) && $user->uid == 0 && !empty($_SESSION['islandora_bookmark'])) {
-    foreach (array_keys($_SESSION['islandora_bookmark']) as $id) {
-      $bookmark_list[] = BookmarkSession::getList($id);
+  if ($user->uid == 0) {
+    if (!isset($_SESSION) || empty($_SESSION['islandora_bookmark']) && variable_get('islandora_bookmark_create_user_default_lists', FALSE)) {
+      BookmarkDefaultSessionList::createNewList(t('My Default List'), 'bookmark_default', $user);
+    }
+
+    if (!empty($_SESSION['islandora_bookmark'])) {
+      foreach (array_keys($_SESSION['islandora_bookmark']) as $id) {
+        $bookmark_list[] = BookmarkSession::getList($id);
+      }
     }
   }
-
   return $bookmark_list;
 }
 
@@ -102,21 +107,26 @@ function islandora_bookmark_get_bookmark_by_number($listid) {
 function islandora_bookmark_get_bookmarks_visible_to_user($pid, $uid) {
   $lists = array();
   // SESSION FIRST.
-  if ($uid == 0 && !empty($_SESSION['islandora_bookmark'])) {
-    foreach ($_SESSION['islandora_bookmark'] as $value) {
-      $templist = $value;
-      if (in_array($pid, $templist->getPids())) {
-        $lists[$templist->getId()] = $templist->getId();
+  if ($uid == 0) {
+    if (!isset($_SESSION) || empty($_SESSION['islandora_bookmark']) && variable_get('islandora_bookmark_create_user_default_lists', FALSE)) {
+      BookmarkDefaultSessionList::createNewList(t('My Default List'), 'bookmark_default', NULL);
+    }
+    if (isset($_SESSION['islandora_bookmark'])) {
+      foreach ($_SESSION['islandora_bookmark'] as $value) {
+        $templist = $value;
+        if (in_array($pid, $templist->getPids())) {
+          $lists[$templist->getId()] = $templist->getId();
+        }
       }
     }
   }
   else {
     // DB.
     $q = <<<EOQ
-SELECT u.listid
-FROM {islandora_bookmark_list_users} as u INNER JOIN
-  {islandora_bookmark_list_pids} as p ON u.listid = p.listid INNER JOIN
-  {islandora_bookmark_list_names} as n ON u.listid = n.listid
+SELECT n.listid
+FROM {islandora_bookmark_list_pids} as p INNER JOIN
+  {islandora_bookmark_list_names} as n ON p.listid = n.listid LEFT JOIN
+  {islandora_bookmark_list_users} as u ON u.listid = p.listid
 WHERE p.pidid = :pid AND :uid IN (u.uid, n.listowner)
 EOQ;
     $list_result = db_query($q, array(':uid' => $uid, ':pid' => $pid))
@@ -157,7 +167,7 @@ function islandora_bookmark_list_users_query($value) {
 }
 
 /**
- * Determines whether the user has a BookmarkDefaultList or not.
+ * Determines whether the user has a BookmarkDefaultDatabaseList or not.
  *
  * @param object $user
  *   Optional user object if we are checking for a specific user.
@@ -166,8 +176,11 @@ function islandora_bookmark_list_users_query($value) {
  *   The ID of the list if they do have one, FALSE otherwise.
  */
 function islandora_bookmark_get_default_list($user = NULL) {
-  if (!$user) {
+  if ($user === NULL) {
     global $user;
+  }
+  elseif (!is_object($user) || !isset($user->uid)) {
+    return FALSE;
   }
   $result = db_query('SELECT listid FROM {islandora_bookmark_list_names} WHERE listowner = :owner AND type = :type',
     array(

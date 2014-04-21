@@ -5,6 +5,8 @@
  * Module used to track and manage user defined lists of pids.
  */
 
+define('ISLANDORA_BOOKMARK_DATABASE_LIST_CREATION_HOOK', 'islandora_bookmark_database_list_creation');
+
 /**
  * Implements hook_menu().
  */
@@ -66,7 +68,7 @@ function islandora_bookmark_menu() {
     'access arguments' => array(2),
     'type' => MENU_CALLBACK,
   );
-  $items['admin/islandora/islandora-bookmark'] = array(
+  $items['admin/islandora/tools/islandora-bookmark'] = array(
     'title' => 'Bookmark',
     'description' => 'Configure settings for the Bookmark module.',
     'page callback' => 'drupal_get_form',
@@ -93,34 +95,10 @@ function islandora_bookmark_menu() {
 function islandora_bookmark_access($list_id) {
   global $user;
 
-  preg_match('/session_/', $list_id, $match);
-
-  if ($match) {
-    $bookmark_access = TRUE;
-  }
-  else {
-    $bookmark_access = FALSE;
-
-    $owner_query = db_query('SELECT listowner FROM {islandora_bookmark_list_names} WHERE listid = :listid ORDER BY listid', array(':listid' => $list_id))->fetchObject();
-
-    if ($owner_query && $owner_query->listowner === $user->uid) {
-      $bookmark_access = TRUE;
-    }
-    else {
-      $user_query = db_query('SELECT uid FROM {islandora_bookmark_list_users} WHERE listid = :listid', array(':listid' => $list_id));
-      foreach ($user_query as $record) {
-        if ($record->uid == $user->uid) {
-          $bookmark_access = TRUE;
-          break;
-        }
-        elseif ($record->uid == 0) {
-          $bookmark_access = TRUE;
-          break;
-        }
-      }
-    }
-  }
-  return $bookmark_access;
+  $bookmark_object = Bookmark::getList($list_id);
+  // We explicitly check anonymous (uid 0) as bookmarks shared with that user
+  // are determined to be accessible to everyone.
+  return $bookmark_object && ($bookmark_object->bookmarkOwner === $user->uid || in_array($user->uid, $bookmark_object->getUsers()) || in_array('0', $bookmark_object->getUsers()));
 }
 
 /**
@@ -248,10 +226,42 @@ function islandora_bookmark_theme() {
  * database.
  */
 function islandora_bookmark_user_login(&$edit, $account) {
+  if (isset($_GET['destination'])) {
+    $destination = $_GET['destination'];
+
+    if (strpos($destination, 'islandora-bookmark/listid') === 0) {
+      $potential_list = substr($destination, strrpos($destination, '/') + 1, strlen($destination));
+    }
+  }
   if (!empty($_SESSION['islandora_bookmark'])) {
     foreach ($_SESSION['islandora_bookmark'] as $bookmark_session) {
-      $persistent_bookmark = BookmarkDatabase::createNewList($bookmark_session->bookmarkName, 'bookmark', $account);
+      // If the list is deletable we can proceed as normal as it's not a
+      // default list.
+      if ($bookmark_session->getIsDeletable()) {
+        $persistent_bookmark = BookmarkDatabase::createNewList($bookmark_session->bookmarkName, 'bookmark', $account);
+      }
+      else {
+        module_load_include('inc', 'islandora_bookmark', 'includes/api');
+        $default_list = islandora_bookmark_get_default_list($account);
+        // A BookmarkDatabaseDefaultList already exists for this user, we will
+        // attempt to append on the PIDs.
+        if ($default_list) {
+          $persistent_bookmark = Bookmark::getList($default_list);
+        }
+        else {
+          $default_list_name = variable_get('islandora_bookmark_default_list_name', "@username's Default List");
+          $default_list_name = format_string($default_list_name, array('@username' => $account->name));
+          $persistent_bookmark = BookmarkDefaultDatabaseList::createNewList($default_list_name, 'bookmark_default', $account);
+          if (variable_get('islandora_bookmark_share_default_list', FALSE)) {
+            // The anonymous user (uid 0) is considered to be "Everyone".
+            $persistent_bookmark->addUser('0');
+          }
+        }
+      }
       $persistent_bookmark->addPids($bookmark_session->getPids());
+      if (isset($potential_list) && $bookmark_session->getId() == $potential_list) {
+        $_GET['destination'] = "islandora-bookmark/listid/{$persistent_bookmark->getId()}";
+      }
     }
     unset($_SESSION['islandora_bookmark']);
   }
@@ -263,7 +273,11 @@ function islandora_bookmark_user_login(&$edit, $account) {
     if (!$default_list_exists) {
       $default_list_name = variable_get('islandora_bookmark_default_list_name', "@username's Default List");
       $default_list_name = format_string($default_list_name, array('@username' => $account->name));
-      BookmarkDefaultList::createNewList($default_list_name, 'bookmark_default', $account);
+      $created_default_list = BookmarkDefaultDatabaseList::createNewList($default_list_name, 'bookmark_default', $account);
+      if (variable_get('islandora_bookmark_share_default_list', FALSE)) {
+        // The anonymous user (uid 0) is considered to be "Everyone".
+        $created_default_list->addUser('0');
+      }
     }
   }
 }
@@ -1094,9 +1108,7 @@ function islandora_bookmark_list_title($list_id) {
   module_load_include('inc', 'islandora_bookmark', 'includes/api');
 
   $bookmark = islandora_bookmark_get_bookmark_by_number($list_id);
-  check_plain($bookmark->bookmarkName);
-
-  return check_plain($bookmark->bookmarkName);
+  return filter_xss($bookmark->bookmarkName);
 }
 
 /**
@@ -1114,6 +1126,6 @@ function islandora_bookmark_islandora_object_purged($pid) {
 function islandora_bookmark_islandora_bookmark_database_types() {
   return array(
     'bookmark' => 'BookmarkDatabase',
-    'bookmark_default' => 'BookmarkDefaultList',
+    'bookmark_default' => 'BookmarkDefaultDatabaseList',
   );
 }

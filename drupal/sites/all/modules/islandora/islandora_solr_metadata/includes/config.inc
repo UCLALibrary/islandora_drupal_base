@@ -111,12 +111,7 @@ function islandora_solr_metadata_config_form($form, $form_state, $configuration_
       ),
     );
   }
-  $form['islandora_solr_metadata_cmodels']['table_wrapper']['cmodel_options'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Add content model'),
-    '#collapsed' => TRUE,
-    '#collapsible' => FALSE,
-  );
+
   // Retrieve all content models and unset those currently in use in this
   // configuration and any others from other configurations.
   $add_options = islandora_get_content_model_names();
@@ -124,19 +119,28 @@ function islandora_solr_metadata_config_form($form, $form_state, $configuration_
     unset($add_options[$entry['cmodel']]);
   }
 
-  $form['islandora_solr_metadata_cmodels']['table_wrapper']['cmodel_options']['cmodel_select'] = array(
-    '#type' => 'select',
-    '#options' => $add_options,
-  );
-  $form['islandora_solr_metadata_cmodels']['table_wrapper']['cmodel_options']['cmodel_add'] = array(
-    '#type' => 'button',
-    '#value' => t('Add'),
-    '#name' => 'islandora-solr-metadata-cmodels-add-cmodel',
-    '#ajax' => array(
-      'callback' => 'islandora_solr_metadata_cmodels_ajax',
-      'wrapper' => 'islandora-solr-metadata-cmodels-wrapper',
-    ),
-  );
+  if (!empty($add_options)) {
+    $form['islandora_solr_metadata_cmodels']['table_wrapper']['cmodel_options'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Add content model'),
+      '#collapsed' => TRUE,
+      '#collapsible' => FALSE,
+    );
+
+    $form['islandora_solr_metadata_cmodels']['table_wrapper']['cmodel_options']['cmodel_select'] = array(
+      '#type' => 'select',
+      '#options' => $add_options,
+    );
+    $form['islandora_solr_metadata_cmodels']['table_wrapper']['cmodel_options']['cmodel_add'] = array(
+      '#type' => 'button',
+      '#value' => t('Add'),
+      '#name' => 'islandora-solr-metadata-cmodels-add-cmodel',
+      '#ajax' => array(
+        'callback' => 'islandora_solr_metadata_cmodels_ajax',
+        'wrapper' => 'islandora-solr-metadata-cmodels-wrapper',
+      ),
+    );
+  }
 
   $form['islandora_solr_metadata_fields'] = array(
     '#type' => 'fieldset',
@@ -184,7 +188,7 @@ function islandora_solr_metadata_config_form($form, $form_state, $configuration_
   $form['islandora_solr_metadata_fields']['table_wrapper']['add_fieldset']['available_solr_fields'] = array(
     '#type' => 'textfield',
     '#description' => t('A field from within Solr'),
-    '#size' => 45,
+    '#size' => 105,
     '#autocomplete_path' => 'islandora_solr/autocomplete_luke',
     '#default_value' => '',
   );
@@ -209,7 +213,7 @@ function islandora_solr_metadata_config_form($form, $form_state, $configuration_
   $form['islandora_solr_metadata_fields']['description_fieldset']['available_solr_fields'] = array(
     '#type' => 'textfield',
     '#description' => t('A field from within Solr'),
-    '#size' => 45,
+    '#size' => 105,
     '#autocomplete_path' => 'islandora_solr/autocomplete_luke',
     '#default_value' => $description['description_field'],
   );
@@ -434,6 +438,10 @@ function islandora_solr_metadata_management($data) {
           '#type' => 'textfield',
           '#default_value' => isset($field['display_label']) ? filter_xss($field['display_label']) : '',
         ),
+        'hyperlink' => array(
+          '#type' => 'checkbox',
+          '#default_value' => isset($field['hyperlink']) ? $field['hyperlink'] : FALSE,
+        ),
         'weight' => array(
           '#type' => 'weight',
           '#title' => t('Weight'),
@@ -456,6 +464,7 @@ function islandora_solr_metadata_management($data) {
       t('Remove'),
       t('Solr Field'),
       t('Display Label'),
+      t('Hyperlink'),
       '',
     ),
     'rows' => $rows,

@@ -29,7 +29,7 @@ function islandora_book_ingest_page(AbstractObject $object) {
   return drupal_get_form('islandora_ingest_form', array(
     'book' => $object,
     'models' => array('islandora:pageCModel'),
-    'object' => $page,
+    'objects' => array($page),
     'parent' => $object->id,
   ));
 }
@@ -208,9 +208,7 @@ function islandora_book_zipped_upload_form_submit(array $form, array &$form_stat
       $renumber_count,
       'Renumbering 1 page and @adding_message.',
       'Renumbering @count pages and @adding_message.',
-      array(
-        '@adding_message' => $status_message,
-      )
+      array('@adding_message' => $status_message)
     );
   }
 

@@ -202,12 +202,8 @@ function islandora_compound_object_manage_form_submit($form, &$form_state) {
   $rels_predicate = variable_get('islandora_compound_object_relationship', 'isConstituentOf');
   // Relationship from child to this object.
   if (!empty($form_state['values']['child'])) {
-    $escaped_pid = str_replace(':', '_', $object->id);
     $child_object = islandora_object_load($form_state['values']['child']);
-    $children = islandora_compound_object_get_parts($object->id, TRUE);
-    $insert_seq = islandora_compound_object_get_insert_sequence_number($children);
-    $child_object->relationships->add('info:fedora/fedora-system:def/relations-external#', $rels_predicate, $object->id);
-    $child_object->relationships->add(ISLANDORA_RELS_EXT_URI, "isSequenceNumberOf$escaped_pid", $insert_seq, TRUE);
+    islandora_compound_object_add_parent($child_object, $object->id);
     if ($create_thumbs) {
       islandora_compound_object_update_parent_thumbnail($object);
     }
@@ -215,11 +211,7 @@ function islandora_compound_object_manage_form_submit($form, &$form_state) {
 
   // Add relationship to parent.
   if (!empty($form_state['values']['parent'])) {
-    $escaped_pid = str_replace(':', '_', $form_state['values']['parent']);
-    $children = islandora_compound_object_get_parts($form_state['values']['parent'], TRUE);
-    $insert_seq = islandora_compound_object_get_insert_sequence_number($children);
-    $object->relationships->add('info:fedora/fedora-system:def/relations-external#', $rels_predicate, $form_state['values']['parent']);
-    $object->relationships->add(ISLANDORA_RELS_EXT_URI, "isSequenceNumberOf$escaped_pid", $insert_seq, TRUE);
+    islandora_compound_object_add_parent($object, $form_state['values']['parent']);
     if ($create_thumbs) {
       islandora_compound_object_update_parent_thumbnail(islandora_object_load($form_state['values']['parent']));
     }
@@ -228,14 +220,7 @@ function islandora_compound_object_manage_form_submit($form, &$form_state) {
   // Remove children.
   // @todo Batch.
   if (!empty($form_state['values']['remove_children'])) {
-    foreach ($form_state['values']['remove_children'] as $child) {
-      if ($child) {
-        $escaped_pid = str_replace(':', '_', $object->id);
-        $child_object = islandora_object_load($child);
-        $child_object->relationships->remove('info:fedora/fedora-system:def/relations-external#', $rels_predicate, $object->id);
-        $child_object->relationships->remove(ISLANDORA_RELS_EXT_URI, "isSequenceNumberOf$escaped_pid");
-      }
-    }
+    islandora_compound_object_remove_parent(array_map('islandora_object_load', array_filter($form_state['values']['remove_children'])), $object->id);
     if ($create_thumbs) {
       islandora_compound_object_update_parent_thumbnail($object);
     }
@@ -243,15 +228,11 @@ function islandora_compound_object_manage_form_submit($form, &$form_state) {
 
   // Unlink parents.
   if (!empty($form_state['values']['unlink_parents'])) {
-    foreach ($form_state['values']['unlink_parents'] as $parent) {
-      if ($parent) {
-        $object->relationships->remove('info:fedora/fedora-system:def/relations-external#', $rels_predicate, $parent);
+    foreach (array_filter($form_state['values']['unlink_parents']) as $parent) {
+      islandora_compound_object_remove_parent($object, $parent);
+      if ($create_thumbs) {
         $parent_object = islandora_object_load($parent);
-        $escaped_pid = str_replace(':', '_', $object->id);
-        $parent_object->relationships->remove(ISLANDORA_RELS_EXT_URI, "isSequenceNumberOf$escaped_pid");
-        if ($create_thumbs) {
-          islandora_compound_object_update_parent_thumbnail($parent_object);
-        }
+        islandora_compound_object_update_parent_thumbnail($parent_object);
       }
     }
   }
@@ -344,7 +325,7 @@ function islandora_compound_object_sequence_batch($pid, array $compounds) {
     'operations' => $operations,
     'title' => t("Sequencing @label's compound objects ...", array('@label' => $object->label)),
     'init_message' => t("Preparing to sequence @label's child objects ...", array('@label' => $object->label)),
-    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaning @estimate.'),
+    'progress_message' => t('Time elapsed: @elapsed <br/>Estimated time remaining @estimate.'),
     'error_message' => t('An error has occurred.'),
     'file' => drupal_get_path('module', 'islandora_compound_object') . '/includes/manage.form.inc',
   );
@@ -438,4 +419,58 @@ function islandora_compound_object_get_insert_sequence_number($children) {
   // Want to insert one past this point.
   $insert_seq++;
   return $insert_seq;
+}
+
+/**
+ * Add the given objects to the given parents.
+ *
+ * @param array|AbstractObject $objects
+ *   An array of AbstractObject to add to a parent, to produce a compound.
+ * @param array|string $parent_pids
+ *   An array of PIDs representing the parents to which an object should be
+ *   added, to make each member of $objects a member of multiple compounds.
+ */
+function islandora_compound_object_add_parent($objects, $parent_pids) {
+  $objects = $objects instanceof AbstractObject ? array($objects) : $objects;
+  $parent_pids = (array) $parent_pids;
+  $rels_predicate = variable_get('islandora_compound_object_relationship', 'isConstituentOf');
+
+  foreach ($parent_pids as $parent_pid) {
+    $escaped_pid = str_replace(':', '_', $parent_pid);
+
+    foreach ($objects as $object) {
+      $children = islandora_compound_object_get_parts($parent_pid, TRUE);
+      $insert_seq = islandora_compound_object_get_insert_sequence_number($children);
+      $object->relationships->add('info:fedora/fedora-system:def/relations-external#', $rels_predicate, $parent_pid);
+      $object->relationships->add(ISLANDORA_RELS_EXT_URI, "isSequenceNumberOf$escaped_pid", $insert_seq, TRUE);
+    }
+  }
+
+  module_invoke_all('islandora_compound_object_children_added_to_parent', $objects, $parent_pids);
+}
+
+/**
+ * Remove the given objects from the given parents.
+ *
+ * @param array|string $objects
+ *   An array of objects to remove from each of the PIDs listed in
+ *   $parent_pids.
+ * @param array|string $parent_pids
+ *   An array of PIDs from which the members of $objects will be removed.
+ */
+function islandora_compound_object_remove_parent($objects, $parent_pids) {
+  $objects = $objects instanceof AbstractObject ? array($objects) : $objects;
+  $parent_pids = (array) $parent_pids;
+  $rels_predicate = variable_get('islandora_compound_object_relationship', 'isConstituentOf');
+
+  foreach ($parent_pids as $parent_pid) {
+    $escaped_pid = str_replace(':', '_', $parent_pid);
+
+    foreach ($objects as $object) {
+      $object->relationships->remove('info:fedora/fedora-system:def/relations-external#', $rels_predicate, $parent_pid);
+      $object->relationships->remove(ISLANDORA_RELS_EXT_URI, "isSequenceNumberOf$escaped_pid");
+    }
+  }
+
+  module_invoke_all('islandora_compound_object_children_removed_from_parent', $objects, $parent_pids);
 }

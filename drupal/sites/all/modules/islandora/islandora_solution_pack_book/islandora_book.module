@@ -10,9 +10,9 @@
  */
 function islandora_book_menu() {
   return array(
-    'admin/islandora/book' => array(
-      'title' => 'Book Collection',
-      'description' => 'Configuration the Book Solution Pack.',
+    'admin/islandora/solution_pack_config/book' => array(
+      'title' => 'Book Solution Pack',
+      'description' => 'Select viewers and configure ingest behavior.',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('islandora_book_admin_settings_form'),
       'access arguments' => array('administer site configuration'),
@@ -50,12 +50,17 @@ function islandora_book_menu() {
     ),
     'islandora/object/%islandora_object/manage/book/ingest_zipped' => array(
       'title' => 'Add Zipped Pages',
-      'page callback' => 'islandora_book_ingest_zipped_pages',
-      'page arguments' => array(2),
+      'page callback' => 'islandora_paged_content_ingest_zipped_pages',
+      'page arguments' => array(2,
+        array('tif', 'tiff', 'jpg', 'jpeg', 'jp2'),
+        'islandora:pageCModel',
+        variable_get('islandora_book_ingest_derivatives', array('ocr')),
+      ),
       'type' => MENU_LOCAL_ACTION,
       'access callback' => 'islandora_object_access',
       'access arguments' => array(ISLANDORA_INGEST, 2),
-      'file' => 'includes/manage_book.inc',
+      'file path' => drupal_get_path('module', 'islandora_paged_content'),
+      'file' => 'includes/manage_pages.inc',
     ),
     'islandora/object/%islandora_object/manage/book_page' => array(
       'title' => 'Page',
@@ -84,6 +89,10 @@ function islandora_book_theme() {
       'arguments' => array('object' => NULL),
       'file' => 'theme/theme.inc',
       'template' => 'theme/islandora-book-page',
+    ),
+    'islandora_book_page_img_print' => array(
+      'template' => 'theme/islandora-book-page-img-print',
+      'variables' => array('islandora_content' => NULL),
     ),
   );
 }
@@ -238,6 +247,24 @@ function islandora_book_islandora_pageCModel_islandora_solr_object_result_alter(
 }
 
 /**
+ * Implements hook_CMODEL_PID_islandora_solr_object_result_alter().
+ *
+ * Add page viewing fragment and search term to show all search results within
+ * book on page load.
+ */
+function islandora_book_islandora_bookCModel_islandora_solr_object_result_alter(&$search_results, $query_processor) {
+  $view_types = array(
+    "1" => "1up",
+    "2" => "2up",
+    "3" => "thumb",
+  );
+  $ia_view = variable_get('islandora_internet_archive_bookreader_default_page_view', "1");
+  $search_results['object_url_fragment'] = "page/1/mode/{$view_types[$ia_view]}/search/";
+  $search_results['object_url_fragment'] .= rawurlencode($query_processor->solrQuery);
+}
+
+
+/**
  * Implements hook_islandora_ingest_steps().
  */
 function islandora_book_islandora_pagecmodel_islandora_ingest_steps(array $form_state) {
@@ -259,36 +286,18 @@ function islandora_book_islandora_pagecmodel_islandora_ingest_steps(array $form_
 
 /**
  * Implements hook_islandora_derivative().
- *
- * XXX: Should add in ability to regenerate PDFs as well... No reliable way to
- * kick off a batch though...
  */
 function islandora_book_islandora_bookcmodel_islandora_derivative() {
-  $pc_module_path = drupal_get_path('module', 'islandora_paged_content');
-
-  $derivatives = array();
-
   module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
-  $derive = islandora_paged_content_get_enabled_ingest_derivatives('islandora_book');
-
-  if ($derive['image']) {
-    $derivatives[] = array(
-      'source_dsid' => NULL,
-      'destination_dsid' => 'TN',
-      'function' => array('islandora_paged_content_derive_thumbnail_of_parent'),
-      'file' => "$pc_module_path/includes/derivatives.inc",
-    );
-  }
-
-  return $derivatives;
+  return islandora_paged_content_paged_object_derivatives('islandora_book');
 }
 
 /**
  * Implements hook_islandora_derivative().
  */
-function islandora_book_islandora_pagecmodel_islandora_derivative(AbstractObject $object = NULL) {
+function islandora_book_islandora_pagecmodel_islandora_derivative() {
   module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
-  return islandora_paged_content_page_derivatives($object, 'islandora_book');
+  return islandora_paged_content_page_derivatives('islandora_book');
 }
 
 /**
@@ -302,7 +311,7 @@ function islandora_book_form_islandora_object_properties_form_alter(array &$form
 }
 
 /**
- * Implements hook_form_islandora_object_properties_form_alter().
+ * Implements hook_form_islandora_delete_object_form_alter().
  */
 function islandora_book_form_islandora_delete_object_form_alter(array &$form, array &$form_state) {
   $object = $form_state['object'];
@@ -353,4 +362,70 @@ function islandora_book_pages_menu(AbstractObject $object) {
   module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
   $pages = islandora_paged_content_get_pages($object);
   return theme('islandora_objects', array('objects' => array_keys($pages)));
+}
+
+/**
+ * Implements hook_islandora_update_related_objects_properties().
+ */
+function islandora_book_islandora_bookCModel_islandora_update_related_objects_properties($object) {
+  module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
+  $get_pid = function($o) {
+    return $o['pid'];
+  };
+  $pages = array_values(array_map($get_pid, islandora_paged_content_get_pages($object)));
+  return $pages;
+}
+
+/**
+ * Implements hook_islandora_xacml_editor_child_query().
+ */
+function islandora_book_islandora_bookCModel_islandora_xacml_editor_child_query(AbstractObject $object) {
+  $pages_query = <<<EOQ
+SELECT ?object from <#ri> WHERE
+{
+  ?object <fedora-rels-ext:isMemberOf> <info:fedora/{$object->id}>
+}
+EOQ;
+  return array(
+    'book_pages' => array(
+      'type' => 'sparql',
+      'query' => $pages_query,
+      'description' => t('All pages of this book (existing and new).'),
+      'recurse' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_islandora_view_print_object().
+ */
+function islandora_book_islandora_view_print_object($object) {
+  if (in_array('islandora:pageCModel', $object->models)) {
+    // Theme image separately.
+    $islandora_content = theme('image', array(
+      'title' => $object->label,
+      'path' => url("islandora/object/{$object->id}/datastream/JPG/view"),
+    ));
+    return theme('islandora_book_page_img_print', array(
+      'islandora_content' => $islandora_content,
+    ));
+  }
+}
+
+/**
+ * HOOK_CMODEL_PID_DSID_islandora_datastream_ingested().
+ */
+function islandora_book_islandora_pagecmodel_techmd_islandora_datastream_ingested(AbstractObject $object, AbstractDatastream $datastream) {
+  module_load_include('module', 'islandora_fits');
+  $techmd = $datastream->content;
+  $xml = new SimpleXMLElement($techmd);
+  $fits_metadata = islandora_fits_child_xpath($xml);
+  $unit = isset($fits_metadata['Jhove']['Sampling Frequency Unit'][0]) ? $fits_metadata['Jhove']['Sampling Frequency Unit'][0] : 'ins.';
+  $xcount = isset($fits_metadata['Jhove']['X Sampling Frequency'][0]) ? $fits_metadata['Jhove']['X Sampling Frequency'][0] : '600';
+  $ycount = isset($fits_metadata['Jhove']['Y Sampling Frequency'][0]) ? $fits_metadata['Jhove']['Y Sampling Frequency'][0] : '600';
+  if ($xcount < 600 || $ycount < 600) {
+    $message = t("Ingested image has a sampling frequency of @x by @y per @unit For best results use images of at least 600 by 600 per in.",
+        array('@x' => $xcount, '@y' => $ycount, '@unit' => $unit));
+    drupal_set_message($message, 'warning', FALSE);
+  }
 }

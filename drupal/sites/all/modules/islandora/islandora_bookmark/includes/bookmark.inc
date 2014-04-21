@@ -9,6 +9,7 @@
  * Interface defining the base operations required to implement a backend.
  */
 interface BookmarkInterface {
+
   /**
    * Adds the specified PID to the given list.
    *
@@ -77,6 +78,7 @@ interface BookmarkInterface {
  * constructed such that it contains a listname and listid for uniqueness.
  */
 abstract class Bookmark implements BookmarkInterface {
+
   /**
    * The name of the object.
    *
@@ -216,7 +218,6 @@ abstract class Bookmark implements BookmarkInterface {
       // Pass off to BookmarkDatabase.
       $bookmark = BookmarkDatabase::getList($id, FALSE);
     }
-
     return $bookmark;
   }
 
@@ -384,12 +385,10 @@ abstract class Bookmark implements BookmarkInterface {
    *   theme_tableselect().
    */
   protected function getTableHeader() {
-    $header = array('markup' => array('data' => t('Label')));;
-
+    $header = array('markup' => array('data' => t('Label')));
     if ($this->managementAccess()) {
       $header['remove'] = array('data' => t('Operations'));
     }
-
     return $header;
   }
 
@@ -415,7 +414,6 @@ abstract class Bookmark implements BookmarkInterface {
         '#button_type' => 'submit',
         '#pid' => $pid,
         '#value' => t('Remove'),
-
       );
       $row['remove'] = array(
         'data' => drupal_render($remove_button),
@@ -473,7 +471,7 @@ abstract class Bookmark implements BookmarkInterface {
           'path' => drupal_get_path('module', 'islandora_bookmark') . '/images/rss.png',
           'title' => t('Present Bookmark list in RSS form'),
           'attributes' => array(),
-        )), "islandora-bookmark/listid/$id/rss", array('html' => TRUE)),
+            )), "islandora-bookmark/listid/$id/rss", array('html' => TRUE)),
         '#prefix' => '<div id="islandora-bookmark-rss-format">',
         '#suffix' => '</div>',
       );
@@ -493,8 +491,8 @@ abstract class Bookmark implements BookmarkInterface {
     $form['bookmarks']['fieldset'] += array(
       'table' => $table += array(
         '#empty' => t('@type list is empty.', array(
-          '@type' => ucwords(variable_get('islandora_bookmark_type', 'bookmark')),
-        )),
+      '@type' => ucwords(variable_get('islandora_bookmark_type', 'bookmark')),
+    )),
         '#weight' => -2,
       ),
       'pager' => array(
@@ -569,7 +567,6 @@ abstract class Bookmark implements BookmarkInterface {
             '#title' => t('Style'),
             '#options' => $value,
             '#weight' => 0,
-            '#name' => 'islandora_bookmark_export_styles_' . $key,
             '#states' => array(
               'visible' => array(
                 ':input[name="bookmarks[fieldset][export_options]"]' => array('value' => $key),
@@ -670,12 +667,11 @@ abstract class Bookmark implements BookmarkInterface {
             else {
               $output_user = user_load($remove_user)->name;
             }
-            drupal_set_message(t('The user @username has been removed from the list @listname.',
-                array(
-                  '@listname' => $this->bookmarkName,
-                  '@username' => $output_user,
-                )
-              ));
+            drupal_set_message(t('The user @username has been removed from the list @listname.', array(
+              '@listname' => $this->bookmarkName,
+              '@username' => $output_user,
+                    )
+            ));
             $this->removeUsers(array($remove_user));
           }
         }
@@ -756,11 +752,11 @@ abstract class Bookmark implements BookmarkInterface {
           }
           // Get all users for use in select for forms.
           $result = db_select('users', 'u')
-            ->fields('u', array('uid', 'name'))
-            ->condition('STATUS', 0, '!=')
-            ->condition('uid', $user->uid, '!=')
-            ->orderBy('uid')
-            ->execute();
+              ->fields('u', array('uid', 'name'))
+              ->condition('STATUS', 0, '!=')
+              ->condition('uid', $user->uid, '!=')
+              ->orderBy('uid')
+              ->execute();
 
           $options += $result->fetchAllAssoc('uid', PDO::FETCH_ASSOC);
           if (isset($options['0'])) {
@@ -837,7 +833,7 @@ abstract class Bookmark implements BookmarkInterface {
   /**
    * Submission callback; export the selected PIDs.
    */
-  protected function formExportSelected($form, $form_state) {
+  protected function formExportSelected(&$form, &$form_state) {
     $pids = $this->formGetSelected($form_state);
     $this->formExport($pids, $form_state);
   }
@@ -845,7 +841,7 @@ abstract class Bookmark implements BookmarkInterface {
   /**
    * Submission callback; export all PIDs in the list.
    */
-  protected function formExportAll($form, $form_state) {
+  protected function formExportAll(&$form, &$form_state) {
     $pids = $this->formGetAll($form_state);
     $this->formExport($pids, $form_state);
   }
@@ -856,30 +852,29 @@ abstract class Bookmark implements BookmarkInterface {
   protected function formExport($pids, $form_state) {
     $el = $form_state['complete form']['bookmarks']['fieldset']['export_options'];
     $key = drupal_array_get_nested_value($form_state['values'], $el['#parents']);
-
     $params = array(
       $pids,
     );
-
-    if (array_key_exists('islandora_bookmark_export_styles_' . $key, $form_state['input'])) {
-      $params[] = $form_state['input']['islandora_bookmark_export_styles_' . $key];
+    if (isset($form_state['values']['bookmarks']['fieldset']['format_opts']['export_styles'])) {
+      if (array_key_exists($key, $form_state['values']['bookmarks']['fieldset']['format_opts']['export_styles'])) {
+        $params[] = $form_state['values']['bookmarks']['fieldset']['format_opts']['export_styles'][$key];
+      }
     }
-
     call_user_func_array($form_state['islandora_bookmark_export'][$key], $params);
   }
 
   /**
    * Submission callback; remove the selected PIDs from the list.
    */
-  protected function formRemoveSelectedFromList($form_state) {
-    $pids = $this->formGetAll($form_state);
+  protected function formRemoveSelectedFromList(&$form, &$form_state) {
+    $pids = $this->formGetSelected($form_state);
     $this->formRemoveFromList($pids, $form_state);
   }
 
   /**
    * Submission callback; remove all PIDs from the list.
    */
-  protected function formRemoveAllFromList($form_state) {
+  protected function formRemoveAllFromList(&$form, &$form_state) {
     $pids = $this->formGetAll($form_state);
     $this->formRemoveFromList($pids, $form_state);
   }
@@ -958,9 +953,7 @@ abstract class Bookmark implements BookmarkInterface {
     $errors = form_get_errors();
     if (count($errors) === 0) {
       $page = pager_default_initialize(
-        $this->getPidCount(),
-        variable_get('islandora_bookmark_detailed_page_elements', 10),
-        $form_state['islandora_bookmark_pager_element']
+          $this->getPidCount(), variable_get('islandora_bookmark_detailed_page_elements', 10), $form_state['islandora_bookmark_pager_element']
       );
 
       $form_state['redirect'] = array(
@@ -986,7 +979,7 @@ abstract class Bookmark implements BookmarkInterface {
     if (!empty($broken)) {
       watchdog('islandora_bookmark', 'Broken PIDs encountered: @pids', array(
         '@pids' => implode(', ', $broken),
-      ), WATCHDOG_WARNING);
+          ), WATCHDOG_WARNING);
     }
 
     return $functional;
@@ -1002,9 +995,10 @@ abstract class Bookmark implements BookmarkInterface {
     if (!empty($broken)) {
       watchdog('islandora_bookmark', 'Broken PIDs encountered: @pids', array(
         '@pids' => implode(', ', $broken),
-      ), WATCHDOG_WARNING);
+          ), WATCHDOG_WARNING);
     }
 
     return $functional;
   }
+
 }

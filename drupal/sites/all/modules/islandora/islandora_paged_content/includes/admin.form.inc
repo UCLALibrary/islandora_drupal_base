@@ -68,6 +68,13 @@ function islandora_paged_content_admin_settings_form(array $form, array &$form_s
       '#description' => t('The page or sequence number of each page or image.'),
       '#default_value' => $get_default_value('islandora_paged_content_sequence_number_field', 'RELS_EXT_isSequenceNumber_literal_ms'),
     ),
+
+    'islandora_paged_content_page_label' => array(
+      '#type' => 'checkbox',
+      '#title' => t('Set page labels to sequence numbers'),
+      '#description' => t('The sequence number of each page will be used to set its label.'),
+      '#default_value' => $get_default_value('islandora_paged_content_page_label', FALSE),
+    ),
   );
   return system_settings_form($form);
 }
@@ -117,7 +124,7 @@ function islandora_paged_content_admin_settings_form_executable_available_messag
  *   The element to render as part the ajax callback.
  */
 function islandora_paged_content_admin_settings_form_gs_ajax_callback(array $form, array $form_state) {
-  return $form['local_derivative_settings']['pdf_derivative_settings']['islandora_book_gs'];
+  return $form['local_derivative_settings']['pdf_derivative_settings']['islandora_paged_content_gs'];
 }
 
 /**

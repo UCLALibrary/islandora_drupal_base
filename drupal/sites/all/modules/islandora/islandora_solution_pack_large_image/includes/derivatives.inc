@@ -52,10 +52,34 @@ function islandora_large_image_create_jp2_derivative(AbstractObject $object, $fo
     if ($mime == 'image/jpeg' || $mime == 'image/jpg') {
       $kakadu = FALSE;
     }
+    $lossless = variable_get('islandora_lossless', FALSE);
+    // Use lossless if the image would look too bad with compression.
+    if (!$lossless) {
+      $identify = islandora_large_image_get_identify();
+      $file = drupal_realpath($uploaded_file);
+      // Define all these variables in one call for a large performance gain.
+      list($height, $width, $y_resolution, $x_resolution) = explode(
+        ',',
+        exec(escapeshellcmd("$identify -format \"%h,%W,%y,%x\" $file"))
+      );
+      if (((int) $x_resolution < 300 || (int) $y_resolution < 300) ||
+        ($height < 1024 || $width < 1024)) {
+        $lossless = TRUE;
+      }
+    }
 
     if ($kakadu) {
       // Create JP2.
-      $derivative_file = islandora_large_image_kdu_compress($uploaded_file, "temporary://{$base_name}_JP2.jp2");
+      if (!$lossless) {
+        $derivative_file = islandora_large_image_kdu_compress($uploaded_file, "temporary://{$base_name}_JP2.jp2");
+      }
+      else {
+        $derivative_file = islandora_large_image_kdu_compress(
+          $uploaded_file,
+          "temporary://{$base_name}_JP2.jp2",
+          'Creversible=yes -rate -,1,0.5,0.25 Clevels=5'
+        );
+      }
       if ($derivative_file === FALSE) {
         $to_return['messages'][] = array(
           'message' => t("Kakadu failed. Trying ImageMagick ..."),
@@ -67,7 +91,11 @@ function islandora_large_image_create_jp2_derivative(AbstractObject $object, $fo
       }
     }
     if (!$kakadu) {
-      $derivative_file = islandora_large_image_imagemagick_convert($uploaded_file, "temporary://{$base_name}_JP2.jp2", islandora_large_image_get_args());
+      $derivative_file = islandora_large_image_imagemagick_convert(
+        $uploaded_file,
+        "temporary://{$base_name}_JP2.jp2",
+        islandora_large_image_get_args($lossless)
+      );
     }
     if ($derivative_file === FALSE) {
       $to_return['messages'][] = array(
@@ -77,7 +105,8 @@ function islandora_large_image_create_jp2_derivative(AbstractObject $object, $fo
       );
     }
     else {
-      if (TRUE === islandora_large_image_add_datastream($object, 'JP2', $derivative_file, 'image/jp2', t('JPEG 2000'))) {
+      $added_successfully = islandora_large_image_add_datastream($object, 'JP2', $derivative_file, 'image/jp2', t('JPEG 2000'));
+      if (TRUE === $added_successfully) {
         $to_return['messages'][] = array(
           'message' => t('Created JP2 derivative.'),
           'type' => 'dsm',
@@ -87,13 +116,12 @@ function islandora_large_image_create_jp2_derivative(AbstractObject $object, $fo
       }
       else {
         $to_return['messages'][] = array(
-          'message' => t('Failed to add JP2 derivative to the object.'),
+          'message' => t('Failed to add JP2 derivative to the object. Error message: @message', array('@message' => $added_successfully)),
           'type' => 'dsm',
           'severity' => 'warning',
         );
       }
     }
-
     file_unmanaged_delete($uploaded_file);
     file_unmanaged_delete($derivative_file);
     return $to_return;
@@ -133,7 +161,8 @@ function islandora_large_image_create_jpg_derivative(AbstractObject $object, $fo
       );
     }
     else {
-      if (TRUE === islandora_large_image_add_datastream($object, 'JPG', $derivative_file, 'image/jpeg', t('Medium sized JPEG'))) {
+      $added_successfully = islandora_large_image_add_datastream($object, 'JPG', $derivative_file, 'image/jpeg', t('Medium sized JPEG'));
+      if (TRUE === $added_successfully) {
         $to_return['messages'][] = array(
           'message' => t('Created JPG derivative.'),
           'type' => 'dsm',
@@ -143,7 +172,7 @@ function islandora_large_image_create_jpg_derivative(AbstractObject $object, $fo
       }
       else {
         $to_return['messages'][] = array(
-          'message' => t('Failed to add JPG derivative to the object.'),
+          'message' => t('Failed to add JPG derivative to the object. Error message: @message', array('@message' => $added_successfully)),
           'type' => 'dsm',
           'severity' => 'warning',
         );
@@ -190,7 +219,8 @@ function islandora_large_image_create_tn_derivative(AbstractObject $object, $for
       );
     }
     else {
-      if (TRUE === islandora_large_image_add_datastream($object, 'TN', $derivative_file, 'image/jpeg', t('Thumbnail'))) {
+      $added_successfully = islandora_large_image_add_datastream($object, 'TN', $derivative_file, 'image/jpeg', t('Thumbnail'));
+      if (TRUE === $added_successfully) {
         $to_return['messages'][] = array(
           'message' => t('Created TN derivative.'),
           'type' => 'dsm',
@@ -200,7 +230,7 @@ function islandora_large_image_create_tn_derivative(AbstractObject $object, $for
       }
       else {
         $to_return['messages'][] = array(
-          'message' => t('Failed to add TN derivative to the object.'),
+          'message' => t('Failed to add TN derivative to the object. Error message: @message', array('@message' => $added_successfully)),
           'type' => 'dsm',
           'severity' => 'warning',
         );
@@ -231,6 +261,13 @@ function islandora_large_image_create_tn_derivative(AbstractObject $object, $for
  *   Returns the newly generated file uri or FALSE if the conversion failed
  */
 function islandora_large_image_kdu_compress($src, $dest, $args = NULL) {
+  // Kakadu can't convert bit depth of 1.
+  $identify = islandora_large_image_get_identify();
+  $file = drupal_realpath($src);
+  $depth = exec(escapeshellcmd("$identify -format %[depth] $file"));
+  if ($depth == 1) {
+    return FALSE;
+  }
   // Kinda weird logic, to avoid changing the source.
   $unlink_source = FALSE;
 
@@ -309,7 +346,7 @@ function islandora_large_image_imagemagick_convert($src, $dest, $args) {
   // make the $source image the first parameter and $dest the last.
   // See http://www.imagemagick.org/Usage/basics/#cmdline
   $command = escapeshellarg($src) . ' ' . implode(' ', $args) . ' ' . escapeshellarg($dest);
-  $output = '';
+  $output = array();
   $ret = -1;
   if (_imagemagick_convert_exec($command, $output, $ret) !== TRUE) {
     $variables = array(
@@ -326,7 +363,7 @@ function islandora_large_image_imagemagick_convert($src, $dest, $args) {
 /**
  * Adds a datastream to an object.
  *
- * @param object $object
+ * @param AbstractObject $object
  *   The object to add a datastream to.
  * @param string $dsid
  *   The datastream ID to be added.
@@ -337,16 +374,25 @@ function islandora_large_image_imagemagick_convert($src, $dest, $args) {
  * @param string $label
  *   The label for the datastream.
  *
- * @TODO: could this be a generic function? eg:
- *  islandora_add_datastream($object, $dsid, $file). ?
+ * @return bool|string
+ *   TRUE if the datastream was added/modified successfully, the error message
+ *   otherwise.
  */
 function islandora_large_image_add_datastream(AbstractObject $object, $dsid, $file, $mimetype, $label) {
-  $ds = $object->constructDatastream($dsid, 'M');
-  $ds->label = $label;
-  $ds->mimeType = $mimetype;
-  $ds->setContentFromFile($file);
   try {
-    $object->ingestDatastream($ds);
+    $ingest = !isset($object[$dsid]);
+    if ($ingest) {
+      $ds = $object->constructDatastream($dsid, 'M');
+      $ds->label = $label;
+      $ds->mimeType = $mimetype;
+    }
+    else {
+      $ds = $object[$dsid];
+    }
+    $ds->setContentFromFile($file);
+    if ($ingest) {
+      $object->ingestDatastream($ds);
+    }
     return TRUE;
   }
   catch (exception $e) {
@@ -359,18 +405,22 @@ function islandora_large_image_add_datastream(AbstractObject $object, $dsid, $fi
       'Large Image failed to ingest data stream.<br/>Stack: @ret',
       $variables,
       WATCHDOG_ERROR);
-    return FALSE;
+    $message = $e->getMessage();
+    return $message;
   }
 }
 
 /**
  * Return preconfigured paramaters for ImageMagick JP2 creation.
+ *
+ * @param bool $lossless
+ *   Weather or not the conversion should be lossless.
+ *
  * @return array
  *   Returns the args
  */
-function islandora_large_image_get_args() {
-
-  if (variable_get('islandora_lossless', FALSE)) {
+function islandora_large_image_get_args($lossless) {
+  if ($lossless) {
     $args[] = " -define numrlvls=6";
     $args[] = " -define jp2:tilewidth=1024";
     $args[] = " -define jp2:tileheight=1024";

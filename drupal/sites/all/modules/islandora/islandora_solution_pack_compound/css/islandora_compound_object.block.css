@@ -20,13 +20,14 @@
 
 .islandora-compound-thumbs img {
   float: left;
+  max-width: 85%;
 }
 
 .islandora-compound-thumb .islandora-compound-caption {
-  width: 100%;
-  overflow: hidden;
+  max-width: 85%;
   float: left;
-  white-space: nowrap;
+  line-height: 1.25em;
+  margin-top: 0.5em;
 }
 
 .islandora-compound-thumbs img.active{
