@@ -1,0 +1,6 @@
+name = UCLA PDF Customization
+description = ""
+package = Islandora
+dependencies[] = islandora_pdf
+version = 7.x-dev
+core = 7.x

@@ -1,0 +1,10 @@
+<dsCompositeModel xmlns="info:fedora/fedora-system:def/dsCompositeModel#">
+  <!-- used in addition to islandora:sp_pdf --> 
+  <dsTypeModel ID="TRANSLATION-EN" optional="true">
+      <form MIME="text/plain"></form>
+  </dsTypeModel>
+  <dsTypeModel ID="TRANSCRIPTION" optional="true">
+      <form MIME="text/plain"></form>
+  </dsTypeModel>
+</dsCompositeModel>
+

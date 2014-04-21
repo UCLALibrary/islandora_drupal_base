@@ -1,0 +1,224 @@
+<?php
+
+/**
+ * @file
+ * Classes for the XML Form Processor.
+ */
+
+module_load_include('inc', 'xml_form_api', 'XMLDocument');
+
+/**
+ * Encapsulates the required data to perform a CRUD action.
+ */
+class XMLFormProcessAction {
+
+  /**
+   * ActionInterface to perform.
+   *
+   * @var ActionInterface
+   */
+  public $action;
+
+  /**
+   * FormElement to be processed.
+   *
+   * @var FormElement
+   */
+  public $element;
+
+  /**
+   * Submitted Form Value.
+   *
+   * @var mixed
+   */
+  public $value;
+
+  /**
+   * Creates an XMLFormProcessAction instance.
+   *
+   * @param ActionInterface $action
+   *   The appropriate action that will be performed.
+   * @param FormElement $element
+   *   The FormElement that the action will be performed on.
+   * @param mixed $value
+   *   The value that will be used in execution.
+   */
+  public function __construct(ActionInterface $action, FormElement $element, $value = NULL) {
+    $this->action = $action;
+    $this->element = $element;
+    $this->value = $value;
+  }
+
+  /**
+   * Executes the action.
+   *
+   * @param XMLDocument $document
+   *   The document to execute on.
+   *
+   * @return bool
+   *   Generally TRUE on execution and FALSE otherwise. Specifics depend on the
+   *   implemented ActionInterface in XMLFormProcessAction::__construct().
+   */
+  public function execute(XMLDocument $document) {
+    return $this->action->execute($document, $this->element, $this->value);
+  }
+
+}
+
+/**
+ * Process the form to generate a Document.
+ */
+class XMLFormProcessor {
+
+  /**
+   * Submitted form values.
+   *
+   * @var FormValues
+   */
+  protected $values;
+
+  /**
+   * Document to be modified with the submitted values.
+   *
+   * @var XMLDocument
+   */
+  protected $document;
+
+  /**
+   * Registry to access form element information for modifying the document.
+   *
+   * @var NodeRegistry
+   */
+  protected $nodeRegistry;
+
+  /**
+   *
+   * @var FormElementRegistry
+   */
+  protected $elementRegistry;
+
+  /**
+   * Creates a XMLFormProcessor instance.
+   *
+   * This is used to modify the given document with the values and actions
+   * specified by the submitted form.
+   *
+   * @param FormValues $values
+   *   The submitted values for this form.
+   * @param XMLDocument $document
+   *   The document to be modified with the submitted values.
+   * @param FormElementRegistry $registry
+   *   Registry to access form element information for modifying the document.
+   */
+  public function __construct(FormValues $values, XMLDocument $document, FormElementRegistry $registry) {
+    $this->values = $values;
+    $this->document = $document;
+    $this->nodeRegistry = $document->registry;
+    $this->elementRegistry = $registry;
+  }
+
+  /**
+   * The actual form processor.
+   *
+   * @param FormElement $element
+   *   The element we are processing on.
+   *
+   * @return XMLDocument
+   *   The processed XML Document.
+   */
+  public function process(FormElement $element) {
+    // The order of action execution here is important. Create actions should
+    // take place before updates; newly created elements can be registered as we
+    // can update newly created elements. Delete must come last, as we want the
+    // update actions to run on elements that may then later be removed.
+    $elements = $element->flatten();
+    $this->createNodes($this->getActions($elements, 'create'));
+    $this->modifyNodes($this->getActions($elements, 'update'));
+    $this->modifyNodes($this->getActions($elements, 'delete'));
+    $this->modifyNodes($this->getRemovedFormElementsDeleteActions($element));
+    return $this->document;
+  }
+
+  /**
+   * Returns an array of actions for the element array passed in.
+   *
+   * @param array $elements
+   *   The array of elements to get actions for.
+   * @param string $type
+   *   The type of action to get.
+   *
+   * @return array
+   *   An array of actions.
+   */
+  protected function getActions(array &$elements, $type) {
+    $actions = array();
+    foreach ($elements as $key => $element) {
+      $value = $this->values->getValue($element->hash);
+      $action = isset($element->actions->$type) ? $element->actions->$type : NULL;
+      if (isset($action) && $action->shouldExecute($this->document, $element, $value)) {
+        $actions[] = new XMLFormProcessAction($action, $element, $value);
+        // Remove from the list of actionable elements.
+        unset($elements[$key]);
+      }
+    }
+    return $actions;
+  }
+
+  /**
+   * Creates DOMNodes in the document.
+   *
+   * @param array $actions
+   *   Actions to use when creating nodes.
+   */
+  protected function createNodes(array $actions) {
+    // The create actions are looped in a while statement to allow for out-of-
+    // order construction of elements.
+    do {
+      $continue = FALSE;
+      foreach ($actions as $key => $action) {
+        if ($action->execute($this->document)) {
+          $continue = TRUE;
+          unset($actions[$key]);
+        }
+      }
+    } while ($continue);
+  }
+
+  /**
+   * Updates/Delete's DOMNodes in the document.
+   *
+   * @param array $actions
+   *   Actions to use when modifying nodes.
+   */
+  protected function modifyNodes(array $actions) {
+    foreach ($actions as $action) {
+      $action->execute($this->document);
+    }
+  }
+
+  /**
+   * If registered node element is no longer in the form, add a delete action.
+   *
+   * @param FormElement $element
+   *   The element to get delete actions for.
+   *
+   * @return array
+   *   An array of XMLFormProcessActions.
+   */
+  protected function getRemovedFormElementsDeleteActions(FormElement $element) {
+    $actions = array();
+    $elements = $element->flatten();
+    $registered = $this->nodeRegistry->getRegistered();
+    foreach ($registered as $hash => $node) {
+      if (isset($elements[$hash]) === FALSE) {
+        $element = $this->elementRegistry->get($hash);
+        $delete = isset($element->actions->delete) ? $element->actions->delete : NULL;
+        if (isset($delete)) {
+          $actions[] = new XMLFormProcessAction($delete, $element);
+        }
+      }
+    }
+    return $actions;
+  }
+
+}
