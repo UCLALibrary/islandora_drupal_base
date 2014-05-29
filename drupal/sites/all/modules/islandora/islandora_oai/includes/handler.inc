@@ -99,6 +99,9 @@ function islandora_oai_object_response_xml($params) {
       }
     }
     else {
+      // Need to potentially remove the header information from the XML as
+      // the response is embedded within XML.
+      $content = str_replace('<?xml version="1.0" encoding="UTF-8"?>', '', $content);
       $oai_output = $content;
     }
   }
@@ -107,7 +110,7 @@ function islandora_oai_object_response_xml($params) {
   if (empty($oai_output) && isset($object[$param])) {
     watchdog('islandora_oai', 'The pid @pidname failed to transform on the @datastream datastream with the file @file.',
       array(
-        '@pidname' => $params['record'],
+        '@pidname' => $params['pid'],
         '@file' => $file,
         '@datastream' => $param,
       ), WATCHDOG_ERROR);
@@ -116,7 +119,7 @@ function islandora_oai_object_response_xml($params) {
   elseif (!isset($object[$param])) {
     watchdog('islandora_oai', "The pid @pidname failed to transform on the @datastream datastream as the datastream doesn't exist.",
       array(
-        '@pidname' => $params['record'],
+        '@pidname' => $params['pid'],
         '@datastream' => $param,
       ), WATCHDOG_ERROR);
   }
@@ -508,15 +511,10 @@ function islandora_oai_construct_sparql_query_for_sets($filters, $required = arr
   SELECT DISTINCT ?object ?title ?created !vars
   FROM <#ri>
   WHERE {
-    {
-      ?object <fedora-model:hasModel> ?model
-    }
-    UNION
-    {
-      ?object <fedora-model:hasModel> [<fedora-model:hasModel> ?model]
-    }
-     ?object <fedora-model:label> ?title ;
-          <fedora-model:createdDate> ?created .
+    ?object <fedora-model:hasModel> <info:fedora/islandora:collectionCModel> ;
+            <fedora-model:hasModel> ?model ;
+            <fedora-model:label> ?title ;
+            <fedora-model:createdDate> ?created .
     !required
     !optionals
     !filters
@@ -540,6 +538,20 @@ EOQ;
 
   foreach ($filter_modules as $module) {
     $filters = array_merge_recursive($filters, (array) module_invoke($module, 'islandora_basic_collection_get_query_filters', 'view'));
+  }
+
+  // If the user is choosing to restrict things within the Islandora namespace
+  // the filter needs to be modified as the islandora namespace is always
+  // allowed by default.
+  if (variable_get('islandora_namespace_restriction_enforced', FALSE) && variable_get('islandora_oai_exclude_islandora_namespace', FALSE)) {
+    module_load_include('inc', 'islandora', 'includes/utilities');
+    // This is somewhat of duplicated code but needs to be done so we remove
+    // only the "islandora" namespace.
+    $namespace_array = islandora_get_allowed_namespaces();
+    $key = array_keys($namespace_array, 'islandora');
+    $namespace_array = array_diff_key($namespace_array, array_flip($key));
+    $namespace_sparql = implode('|', $namespace_array);
+    $filters['islandora_namespace_restrictions'] = format_string('regex(str(?object), "info:fedora/(!namespaces):")', array('!namespaces' => $namespace_sparql));
   }
   $filter_map = function ($filter) {
     return "FILTER($filter)";

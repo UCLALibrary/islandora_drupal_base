@@ -26,7 +26,7 @@ function islandora_checksum_checker_cron() {
  */
 function islandora_checksum_checker_menu() {
   $items = array();
-  $items['admin/islandora/checksum_checker'] = array(
+  $items['admin/islandora/tools/checksum_checker'] = array(
     'title' => 'Checksum checker',
     'description' => 'Configure the Islandora Checksum Checker.',
     'page callback' => 'drupal_get_form',
@@ -214,7 +214,7 @@ function islandora_checksum_checker_validate_checksum($pid) {
   // Force the cron to run as user 1 so we don't get locked out of objects.
   $user = user_load(1);
   $tuque = islandora_get_tuque_connection($user);
-  $islandora_object = $tuque->getObject($pid);
+  $islandora_object = islandora_object_load($pid);
 
   if (count($islandora_object)) {
     foreach ($islandora_object as $ds) {

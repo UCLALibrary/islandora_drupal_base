@@ -32,6 +32,17 @@ function islandora_oai_install() {
     'record_namespace' => 'http://www.ndltd.org/standards/metadata/etdms/1.0/',
   ))
   ->execute();
+
+  db_insert('islandora_oai_metadata_formats')
+    ->fields(array(
+      'name' => 'mods',
+      'metadata_prefix' => 'mods',
+      'oai2_schema' => 'http://www.loc.gov/standards/mods/v3/mods-3-4.xsd',
+      'metadata_namespace' => 'http://www.loc.gov/mods/v3',
+      'record_prefix' => 'mods',
+      'record_namespace' => 'http://www.loc.gov/mods/v3',
+    ))
+    ->execute();
 }
 
 /**
@@ -139,7 +150,6 @@ function islandora_oai_schema() {
  * Implements hook_uninstall().
  */
 function islandora_oai_uninstall() {
-  drupal_uninstall_schema('islandora_oai');
   $upload_path = 'public://islandora_oai_xsls';
   $removal_files = file_scan_directory($upload_path, '/(.*)/');
 
@@ -147,6 +157,19 @@ function islandora_oai_uninstall() {
     @file_delete($file);
   }
   drupal_rmdir($upload_path);
+
+  $variables = array(
+    'islandora_oai_collection_field',
+    'islandora_oai_content_model_field',
+    'islandora_oai_date_field',
+    'islandora_oai_exclude_content_models',
+    'islandora_oai_exclude_islandora_namespace',
+    'islandora_oai_metadata_datastream_id_oai_dc',
+    'islandora_oai_metadata_datastream_id_oai_etdms',
+    'islandora_oai_transform_file_oai_dc',
+    'islandora_oai_transform_file_oai_etdms',
+  );
+  array_walk($variables, 'variable_del');
 }
 
 /**
@@ -160,4 +183,20 @@ function islandora_oai_update_7100(&$sandbox) {
   if (db_table_exists('oai2_metadata_formats')) {
     db_rename_table('oai2_metadata_formats', 'islandora_oai_metadata_formats');
   }
+}
+
+/**
+ * Add support for MODS.
+ */
+function islandora_oai_update_7101(&$sandbox) {
+  db_insert('islandora_oai_metadata_formats')
+    ->fields(array(
+      'name' => 'mods',
+      'metadata_prefix' => 'mods',
+      'oai2_schema' => 'http://www.loc.gov/standards/mods/v3/mods-3-4.xsd',
+      'metadata_namespace' => 'http://www.loc.gov/mods/v3',
+      'record_prefix' => 'mods',
+      'record_namespace' => 'http://www.loc.gov/mods/v3',
+    ))
+    ->execute();
 }

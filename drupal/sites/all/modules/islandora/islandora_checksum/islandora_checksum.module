@@ -12,7 +12,7 @@
  */
 function islandora_checksum_menu() {
   $items = array();
-  $items['admin/islandora/checksum'] = array(
+  $items['admin/islandora/tools/checksum'] = array(
     'title' => 'Checksum',
     'description' => 'Configure the Islandora Checksum creator.',
     'page callback' => 'drupal_get_form',
@@ -35,7 +35,7 @@ function islandora_checksum_islandora_datastream_alter(AbstractObject &$object, 
 
 /**
  * Query the resource index to get a list of collections.
- * 
+ *
  * @return array
  *   List of collection PIDs.
  */
@@ -63,7 +63,7 @@ function islandora_checksum_get_collections() {
  *
  * @param string $pid
  *   The PID of Islandora collection.
- * 
+ *
  * @return array
  *   List of member object PIDs.
  */
@@ -93,7 +93,7 @@ function islandora_checksum_apply_retro($form, &$form_state) {
 
 /**
  * Sets up the batch.
- * 
+ *
  * @param string $collection_pid
  *   The PID of the collection to apply checksums to.
  *
@@ -119,7 +119,7 @@ function islandora_checksum_enable_retro_checksums($collection_pid) {
 
 /**
  * Process a single object in the batch.
- * 
+ *
  * @param string $pid
  *   The PID of the object.
  */
@@ -129,7 +129,7 @@ function islandora_checksum_enable_object_checksums($pid, $num_objects, &$contex
   $context['message'] = t('Process object "@pid"', array('@pid' => $pid)) . ' ' . $num_objects;
   $tuque = islandora_get_tuque_connection();
   foreach ($object as $ds) {
-    if (islandora_datastream_access(FEDORA_VIEW_OBJECTS, $ds) && $ds->checksumType == 'DISABLED') {
+    if (islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $ds) && $ds->checksumType == 'DISABLED') {
       $ds->checksumType = variable_get('islandora_checksum_checksum_type', 'DISABLED');
       // Calling modifyDatastream triggers
       // islandora_checksum_islandora_datastream_alter(),
