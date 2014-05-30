@@ -28,6 +28,21 @@ if [[ ! -f ./islandora_modules.txt ]]; then
         echo "Needs to be run from the project or 'scripts' directory"
         exit 1
     fi
+
+# Setting the WEB_GROUP user depending on distro being used
+DISTRIB_ID=`lsb_release -i |awk ' { print $3 }'`
+
+if [[ "$DISTRIB_ID" == 'RedHatEnterpriseServer' ]] \
+	|| [[ "$DISTRIB_ID" == 'RedHat' ]] \
+	|| [[ "$DISTRIB_ID" == 'Fedora' ]] \
+	|| [[ "$DISTRIB_ID" == 'CentOS' ]]; then
+	WEB_GROUP="apache"
+elif [[ "$DISTRIB_ID" == 'Ubuntu' ]] \
+	|| [[ "$DISTRIB_ID" == 'Debian' ]]; then
+	WEB_GROUP="www-data"
+else
+	echo "WARNING: Changing group perms to: '$(id -u -n)'"
+	WEB_GROUP="$(id -u -n)"
 fi
 
 ISLANDORA_MODULE_DIR=../drupal/sites/all/modules/islandora
@@ -58,7 +73,6 @@ do
 		fi
 		cp -fR $tmp_repo_dir $islandora_repo_dir
 		rm -rf $tmp_repo_dir
-		chown -R $WEB_USER $islandora_repo_dir
-		chgrp -R $WEB_USER $islandora_repo_dir
+		chgrp -R $WEB_GROUP $islandora_repo_dir
 	fi
 done
