@@ -35,10 +35,10 @@ https://github.com/Islandora/islandora_xml_forms
 https://github.com/Islandora/islandora_xmlsitemap
 https://github.com/Islandora/objective_forms
 https://github.com/Islandora/php_lib
+https://github.com/Islandora/islandora_sync
 https://github.com/discoverygarden/islandora_binary_object
 https://github.com/discoverygarden/islandora_mapping
 https://github.com/discoverygarden/islandora_plupload
-https://github.com/UCLALibrary/islandora_sync
 https://github.com/UCLALibrary/ucla_migration
 https://github.com/UCLALibrary/ucla_pdf
 https://github.com/rosiel/islandora_pathauto
