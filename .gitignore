@@ -12,11 +12,24 @@ drupal/sites/*/private
 # Ignore paths for the drupal subsites; these have their own repositories
 drupal/sites/islandora_drupal_subsite_*
 drupal/sites/drupal_site_*
+drupal/sites/*.drupal_site_*
+
 drupal/sites/*.aqueduct
 drupal/sites/*.collections
 drupal/sites/*.frontera
 drupal/sites/*.livingstone
-drupal/sites/*.drupal_site_*
+drupal/sites/*.tahrir
+
+# We also need to ignore the multisite symlinks in the base directory
+aqueduct
+collections
+frontera
+livingstone
+tahrir
+
+# Ignore Git repos of Drupal subsites
 */.git
+
+# Question: Would this be better in the global .gitignore?
 */.idea
 .idea/*
