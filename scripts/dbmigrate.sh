@@ -7,7 +7,7 @@
 # and 'to' arguments can be the same if you're not moving across machines.
 #
 # Written By: Kevin S. Clarke <ksclarke@gmail.com>
-# Last Updated: 02/04/2014
+# Last Updated: 06/05/2014
 ##
 
 #
@@ -41,14 +41,11 @@ cp $1 ./${1}.backup
 sed -i '$d' $1
 
 # Changes made when moving between machines
-sed -i -e "s/${2}.library.ucla.edu/${3}.library.ucla.edu/g" $1
-
-# Changes made when converting a standalone site into a multisite
-sed -i -e 's/\/aqueduct\/sites\/default\/files\//\/aqueduct\/sites\/drupal_site_4\/files\//g' $1
-
-# Specific site can catch more than we like
-#sed -i -e 's/\/sites\/default\/files\//\/sites\/drupal_site_7\/files\//g' $1
-#sed -i -e 's/\/sites\/all\/themes\//\/sites\/drupal_site_7\/themes\//g' $1
+if [[ "${3}" -eq "localhost" ]]; then
+  sed -i -e "s/${2}.library.ucla.edu/localhost/g" $1
+else
+  sed -i -e "s/${2}.library.ucla.edu/${3}.library.ucla.edu/g" $1
+fi
 
 #
 # Output the next steps the user needs to take
@@ -57,4 +54,6 @@ sed -i -e 's/\/aqueduct\/sites\/default\/files\//\/aqueduct\/sites\/drupal_site_
 echo "  Database file successfully updated"
 echo ""
 echo "  After you reload the database, you'll need to clear Drupal's cache:"
-echo "    sudo -u devUser1 drush -y -r /var/www/drupal -l @sites cc all"
+echo "    mysql -u root -p ${1/.sql/} < $1"
+echo "    drush -y -r /var/www/drupal @sites cc all"
+echo "  Note: You may need to run with 'sudo -u' to run as the correct user"
