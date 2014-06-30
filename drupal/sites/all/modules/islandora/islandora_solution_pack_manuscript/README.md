@@ -2,13 +2,13 @@
 
 ## Introduction
 
-Allows users to create and view Manuscripts. Including the upload of TEI and XSLT and CSS documents. Users will be able to view transformed manuscript TEI (via the upload XSLT) side by side with the image(s) of the manuscript (via the Open Seadragon viewer). Users will also be able to browse Manuscripts via Box / Folder hierarchies as defined by their inventory record.
+Allows users to create and view Manuscripts. Including the upload of TEI and XSLT and CSS documents. Users will be able to view transformed manuscript TEI (via the upload XSLT) side by side with the image(s) of the manuscript (via the Open Seadragon viewer). Users will also be able to browse Manuscripts via Box / Folder hierarchies as defined by their record in an associated finding aid.
 
 ### Key Features
 
 * Ability to upload TEI
 * Ability to upload XSLT (1.0) / CSS
-* Ability to associate XSLT / CSS with a Inventory Object
+* Ability to associate XSLT / CSS with a Finding Aid Object
 * Rendering of TEI as HTML (XSLT)
 * Open Sea Dragon Viewer display of Manuscript image Content
 * Side by side view of Transformed TEI and Open Sea Dragon Viewer
@@ -20,6 +20,7 @@ This module requires the following modules/libraries:
 
 * [Islandora](https://github.com/islandora/islandora)
 * [Islandora Paged Content](https://github.com/Islandora/islandora_paged_content)
+* [jstree](https://github.com/vakata/jstree)
 
 This module has the following recommended (optional) modules/libraries:
 
@@ -31,6 +32,8 @@ This module has the following recommended (optional) modules/libraries:
 ## Installation
 
 Install as usual, see [this](https://drupal.org/documentation/install/modules-themes/modules-7) for further information.
+
+Download/clone the [jsTree](https://github.com/vakata/jstree) library to `sites/all/libraries/jstree`. The module has been tested with the 3.0.0 release of jsTree.
 
 ## Configuration
 

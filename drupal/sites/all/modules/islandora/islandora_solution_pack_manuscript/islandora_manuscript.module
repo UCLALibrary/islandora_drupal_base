@@ -7,6 +7,10 @@
 
 // Predicates.
 define('ISLANDORA_MANUSCRIPT_HAS_TRANSFORM_PREDICATE', 'hasTransform');
+define('ISLANDORA_MANUSCRIPT_HAS_EAD_PREDICATE', 'isMemberOf');
+
+// Islandora Objects.
+define('ISLANDORA_MANUSCRIPT_DEFAULT_TRANSFORM', 'islandora:defaultTransform');
 
 /**
  * Implements hook_menu().
@@ -28,7 +32,7 @@ function islandora_manuscript_menu() {
       'page arguments' => array(2),
       'access callback' => 'islandora_user_access',
       'access arguments' => array(
-        2, array(ISLANDORA_VIEW_OBJECTS), array('islandora:manuscriptInventoryCModel'),
+        2, array(ISLANDORA_VIEW_OBJECTS), array('islandora:findingAidCModel'),
       ),
       'file' => 'includes/manuscript_list.inc',
       'type' => MENU_LOCAL_TASK,
@@ -56,7 +60,7 @@ function islandora_manuscript_menu() {
         2,
         array(ISLANDORA_MANAGE_PROPERTIES),
         array(
-          'islandora:manuscriptInventoryCModel',
+          'islandora:findingAidCModel',
           'islandora:collectionCModel',
         ),
       ),
@@ -95,6 +99,15 @@ function islandora_manuscript_menu() {
       'file path' => drupal_get_path('module', 'islandora_paged_content'),
       'file' => 'includes/manage_pages.inc',
     ),
+    'islandora/object/%islandora_object/manage/manuscript/link-finding-aid' => array(
+      'title' => 'Link with Finding Aid',
+      'type' => MENU_LOCAL_ACTION,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_manuscript_link_to_finding_aid_form', 2),
+      'access callback' => 'islandora_manuscript_link_to_finding_aid_access_callback',
+      'access arguments' => array(2),
+      'file' => 'includes/link.inc',
+    ),
     'islandora/object/%islandora_object/manage/manuscript_page' => array(
       'title' => 'Page',
       'type' => MENU_LOCAL_TASK,
@@ -105,7 +118,38 @@ function islandora_manuscript_menu() {
       'file path' => drupal_get_path('module', 'islandora_paged_content'),
       'file' => 'includes/manage_page.inc',
     ),
+    'islandora_manuscript/autocomplete/finding_aid' => array(
+      'title' => 'Finding Aid Autocomplete Callback',
+      'page callback' => 'islandora_manuscript_autocomplete_finding_aid',
+      'access arguments' => array(ISLANDORA_VIEW_OBJECTS),
+      'file' => 'includes/link.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/object/%islandora_object/manage/islandora_manuscript_ingest' => array(
+      'title' => 'Add a manuscript',
+      'page callback' => 'islandora_manuscript_manuscript_ingest',
+      'page arguments' => array(2),
+      'access callback' => 'islandora_manuscript_manuscript_ingest_access_callback',
+      'access arguments' => array(2),
+      'file' => 'includes/link.inc',
+      'type' => MENU_LOCAL_ACTION,
+    ),
   );
+}
+
+/**
+ * Access callback for finding aid link path.
+ */
+function islandora_manuscript_link_to_finding_aid_access_callback($object) {
+  module_load_include('inc', 'islandora_manuscript', 'includes/link');
+  return $object instanceof AbstractObject && !islandora_manuscript_has_finding_aid_link($object) && islandora_datastream_access(ISLANDORA_METADATA_EDIT, $object['RELS-EXT']);
+}
+
+/**
+ * Manuscript ingest access callback.
+ */
+function islandora_manuscript_manuscript_ingest_access_callback($object) {
+  return $object instanceof AbstractObject && in_array('islandora:findingAidCModel', $object->models) && islandora_object_access(ISLANDORA_INGEST, $object);
 }
 
 /**
@@ -136,9 +180,23 @@ function islandora_manuscript_theme() {
       'template' => 'theme/islandora-manuscript-manuscript',
     ),
     'islandora_manuscript_page' => array(
-      'arguments' => array('object' => NULL),
+      'variables' => array('object' => NULL),
       'file' => 'theme/theme.inc',
       'template' => 'theme/islandora-manuscript-page',
+    ),
+    'islandora_manuscript_ead_display' => array(
+      'variables' => array(
+        'object' => NULL,
+        'xslt_parameters' => array(),
+        'xslt_functions' => array(
+          'islandora_manuscript_build_parented_query_url',
+          'islandora_manuscript_build_flat_query_url',
+        ),
+        'doc' => NULL,
+        'xslt_doc' => NULL,
+      ),
+      'file' => 'theme/theme.inc',
+      'template' => 'theme/islandora-manuscript-ead-display',
     ),
   );
 }
@@ -168,14 +226,14 @@ function islandora_manuscript_islandora_required_objects(IslandoraTuque $connect
     }
     return $object;
   };
-  // Manuscript Inventory Content Model.
-  $manuscript_inventory_content_model = $create_object($connection, array(
-    'pid' => 'islandora:manuscriptInventoryCModel',
-    'label' => 'Manuscript Inventory Content Model',
+  // Finding Aid Content Model.
+  $manuscript_finding_aid_content_model = $create_object($connection, array(
+    'pid' => 'islandora:findingAidCModel',
+    'label' => 'Finding Aid Content Model',
     'model' => 'fedora-system:ContentModel-3.0',
     'datastreams' => array(
       'DS-COMPOSITE-MODEL' => array(
-        'file' => "$module_path/data/objects/manuscript_inventory_ds_composite_model.xml",
+        'file' => "$module_path/data/objects/manuscript_finding_aid_ds_composite_model.xml",
       ),
     ),
   ));
@@ -212,7 +270,7 @@ function islandora_manuscript_islandora_required_objects(IslandoraTuque $connect
       ),
     ),
   ));
-  // Manuscript / Manuscript Inventory Collection.
+  // Manuscript / Finding Aid Collection.
   $manuscript_collection = $create_object($connection, array(
     'pid' => 'islandora:manuscriptCollection',
     'label' => 'Manuscript Collection',
@@ -244,16 +302,29 @@ function islandora_manuscript_islandora_required_objects(IslandoraTuque $connect
     ),
   ));
   $transform_collection->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'islandora:root');
+  // Default transform.
+  $default_transform = $create_object($connection, array(
+    'pid' => ISLANDORA_MANUSCRIPT_DEFAULT_TRANSFORM,
+    'label' => 'Default Transform',
+    'model' => 'islandora:transformCModel',
+    'datastreams' => array(
+      'XSLT' => array(
+        'file' => "$module_path/data/objects/default_transform.xsl",
+        'mimetype' => 'application/xslt+xml',
+      ),
+    ),
+  ));
   return array(
     'islandora_manuscript' => array(
       'title' => 'Islandora Manuscript Solution Pack',
       'objects' => array(
-        $manuscript_inventory_content_model,
+        $manuscript_finding_aid_content_model,
         $manuscript_content_model,
         $manuscript_page_content_model,
         $transform_content_model,
         $manuscript_collection,
         $transform_collection,
+        $default_transform,
       ),
     ),
   );
@@ -262,7 +333,7 @@ function islandora_manuscript_islandora_required_objects(IslandoraTuque $connect
 /**
  * Implements hook_islandora_ingest_steps().
  */
-function islandora_manuscript_islandora_manuscriptinventorycmodel_islandora_ingest_steps() {
+function islandora_manuscript_islandora_findingaidcmodel_islandora_ingest_steps() {
   return array(
     'islandora_manuscript_ead_upload' => array(
       'weight' => 10,
@@ -277,8 +348,8 @@ function islandora_manuscript_islandora_manuscriptinventorycmodel_islandora_inge
 /**
  * Implements hook_islandora_ingest_steps().
  */
-function islandora_manuscript_islandora_manuscriptcmodel_islandora_ingest_steps() {
-  return array(
+function islandora_manuscript_islandora_manuscriptcmodel_islandora_ingest_steps($form_state) {
+  $steps = array(
     'islandora_manuscript_tei_upload' => array(
       'weight' => 10,
       'type' => 'form',
@@ -287,6 +358,16 @@ function islandora_manuscript_islandora_manuscriptcmodel_islandora_ingest_steps(
       'file' => 'includes/tei_upload.form.inc',
     ),
   );
+
+  $steps['islandora_manuscript_link_to_finding_aid'] = array(
+    'weight' => 5,
+    'type' => 'form',
+    'form_id' => 'islandora_manuscript_link_to_finding_aid_form',
+    'module' => 'islandora_manuscript',
+    'file' => 'includes/link.inc',
+  );
+
+  return $steps;
 }
 
 /**
@@ -392,7 +473,20 @@ function islandora_manuscript_islandora_manuscriptcmodel_islandora_view_object($
 /**
  * Implements hook_CMODEL_PID_islandora_view_object().
  */
-function islandora_manuscript_islandora_pagecmodel_islandora_view_object($object, $page_number, $page_size) {
+function islandora_manuscript_islandora_findingaidcmodel_islandora_view_object($object) {
+  return array(
+    'islandora_manuscript_ead_display' => array(
+      '#type' => 'markup',
+      '#theme' => 'islandora_manuscript_ead_display',
+      '#object' => $object,
+    ),
+  );
+}
+
+/**
+ * Implements hook_CMODEL_PID_islandora_view_object().
+ */
+function islandora_manuscript_islandora_manuscriptpagecmodel_islandora_view_object($object, $page_number, $page_size) {
   $output = theme('islandora_manuscript_page', array('object' => $object));
   return array('islandora_manuscript' => $output);
 }
@@ -405,5 +499,22 @@ function islandora_manuscript_form_islandora_delete_object_form_alter(array &$fo
   $object = $form_state['object'];
   if (in_array('islandora:transformCModel', $object->models)) {
     $form['#submit'] = array('islandora_manuscript_islandora_delete_object_form_submit');
+  }
+}
+
+/**
+ * Implements hook_file_mimetype_mapping_alter().
+ */
+function islandora_manuscript_file_mimetype_mapping_alter(&$mapping) {
+  $mime_detect = new MimeDetect();
+  $types = $mime_detect->getMimeTypes();
+  $intersect = array_intersect_key($types, $mapping['extensions']);
+  foreach ($intersect as $ext => $mime) {
+    $keys = array_keys($mapping['mimetypes'], $mime);
+    if (empty($keys)) {
+      $mapping['mimetypes'][] = $mime;
+      $keys = array_keys($mapping['mimetypes'], $mime);
+    }
+    $mapping['extensions'][$ext] = reset($keys);
   }
 }
