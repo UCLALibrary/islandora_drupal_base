@@ -29,6 +29,8 @@ tahrir
 
 # Ignore Git repos of Drupal subsites
 */.git
+drupal/sites/all/libraries/*/.git/
+drupal/sites/all/modules/islandora/*/.git/
 
 # Question: Would this be better in the global .gitignore?
 */.idea
