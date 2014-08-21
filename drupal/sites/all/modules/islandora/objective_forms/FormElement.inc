@@ -50,13 +50,21 @@ class FormElement implements ArrayAccess {
    */
   protected $registry;
 
+
+  /**
+   * Index of the current element, within its parent.
+   *
+   * @var string|int
+   */
+  protected $index;
+
   /**
    * Instantiate's a FormElement.
    *
    * @param array $form
    *   Drupal form definition.
    */
-  public function __construct(FormElementRegistry $registry = NULL /* yuck fix this.. */, array $form = NULL) {
+  public function __construct(FormElementRegistry $registry = NULL /* yuck fix this.. */, array $form = NULL, $index = NULL) {
     $this->protected = new ReadOnlyProtectedMembers(array('parent' => NULL, 'hash' => NULL));
     $this->registry = $registry;
     $this->controls = array();
@@ -67,6 +75,7 @@ class FormElement implements ArrayAccess {
     if ($this->registry) {
       $this->registry->registerCreated($this);
     }
+    $this->index = $index;
   }
 
   /**
@@ -109,7 +118,7 @@ class FormElement implements ArrayAccess {
   protected function initializeChildren(array &$form) {
     $children = element_children($form);
     foreach ($children as $key) {
-      $child = new FormElement($this->registry, $form[$key]);
+      $child = new FormElement($this->registry, $form[$key], $key);
       $this->adopt($child, $key);
     }
   }
@@ -147,6 +156,7 @@ class FormElement implements ArrayAccess {
     if ($this->registry) {
       $this->registry->registerClone($original_hash, $this);
     }
+    $this->index = NULL;
   }
 
   /**
@@ -175,7 +185,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function flatten.
-   * 
+   *
    * Converts the tree like structure of a FormElement and its children to a
    * flat array.
    *
@@ -195,7 +205,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function eachChild.
-   * 
+   *
    * Takes a callback, and calls it repeatedly passing each child FormElement
    * to the callback as the first parameter. Any other parameters passed to this
    * function will be passed to the callback as additional parameters.
@@ -227,7 +237,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function eachControl.
-   * 
+   *
    * Takes a callback, and calls it repeatedly passing each control/property to
    * the callback with the name of the control/property as the first parameter
    * and the value of the control/property as the second paramter. Any other
@@ -258,7 +268,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function eachDecendant.
-   * 
+   *
    * Takes a callback, and calls it repeatedly passing each decendant
    * FormElement to the callback as the first parameter. Any other parameters
    * passed to this function will be passed to the callback as additional
@@ -271,7 +281,7 @@ class FormElement implements ArrayAccess {
    *
    * @param callback $function
    *   The function to be called repeatedly.
-   * 
+   *
    * @return bool
    *   TRUE if the function was called for all decendants, FALSE otherwise.
    */
@@ -298,7 +308,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function each.
-   * 
+   *
    * Takes a callback, and calls it repeatedly passing itself and each decendant
    * FormElement to the callback as the first parameter. Any other parameters
    * passed to this function will be passed to the callback as additional
@@ -311,7 +321,7 @@ class FormElement implements ArrayAccess {
    *
    * @param callback $function
    *   The function to be called repeatedly.
-   * 
+   *
    * @return bool
    *   TRUE if the function was called for all decendants, FALSE otherwise.
    */
@@ -327,14 +337,14 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function __get.
-   * 
+   *
    * Gets a child FormElement, control/property, or ProtectedReadOnlyMember if
    * it exists.
    *
    * @param mixed $name
    *   The name of the child FormElement, control/property, or
    *   ProtectedReadOnlyMember.
-   * 
+   *
    * @return mixed
    *   The child FormElement, control/property, or ProtectedReadOnlyMember
    *   identified by $name if found, NULL otherwise.
@@ -356,7 +366,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function __set.
-   * 
+   *
    * Adds/Sets the value for a child FormElement, control/property, or
    * ProtectedReadOnlyMember.
    *
@@ -381,7 +391,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function __isset.
-   * 
+   *
    * Checks if a given child FormElement or a control/property identified by
    * $name exists. Also checks for the existance of values stored in this
    * objects ReadOnlyMembers.
@@ -403,7 +413,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function __unset.
-   * 
+   *
    * Unsets a given child FormElement, control/property, or
    * ProtectedReadOnlyMember identified by $name.
    *
@@ -427,7 +437,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function offsetExists.
-   * 
+   *
    * Checks if a given child FormElement or a control/property identified by
    * $offsets exists.
    *
@@ -445,13 +455,13 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function offsetGet.
-   * 
+   *
    * Gets a the child FormElement or a control/property identified by $offset
    * if it exists.
    *
    * @param mixed $offset
    *   The name of the child FormElement or control/property.
-   * 
+   *
    * @return mixed
    *   If found, this function will return either a child FormElement or a
    *   FormControl.
@@ -468,7 +478,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function offsetSet.
-   * 
+   *
    * Adds/Sets a child FormElement or a control/property identified by $offset
    * if it exists.
    *
@@ -489,7 +499,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function offsetUnset.
-   * 
+   *
    * Unsets a given child FormElement or control/property identified by $offset.
    *
    * @param mixed $offset
@@ -506,7 +516,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function adopt.
-   * 
+   *
    * Adopt the child FormElement, this forcefully orphans the child from its
    * original parent.
    *
@@ -531,7 +541,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function setParent.
-   * 
+   *
    * Sets this FormElements parent to the one provided. Orphaning this
    * FormElement from its previous parent FormElement.
    *
@@ -546,7 +556,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function orphan.
-   * 
+   *
    * Orphans this FormElement, and removes the relationship its parent
    * FormElement has with it.
    *
@@ -564,7 +574,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function orphanChild.
-   * 
+   *
    * Removes the child element defined by $remove from this FormElement.
    *
    * @param FormElement $remove
@@ -585,7 +595,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Funciton getIndex.
-   * 
+   *
    * Get's the index of this FormElement in its parent's children array if it
    * has a parent.
    *
@@ -594,19 +604,20 @@ class FormElement implements ArrayAccess {
    *   has no parent.
    */
   public function getIndex() {
-    if (isset($this->parent)) {
+    if ($this->index === NULL && isset($this->parent)) {
       foreach ($this->parent->children as $index => $child) {
         if ($child === $this) {
-          return $index;
+          $this->index = $index;
+          break;
         }
       }
     }
-    return NULL;
+    return $this->index;
   }
 
   /**
    * Function getLocation.
-   * 
+   *
    * Gets the full path in the form definition to this element.
    *
    * @return string
@@ -620,7 +631,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function toArray.
-   * 
+   *
    * Converts this FormElement into an array that can be used with the Drupal
    * Form API, as a form definition.
    *
@@ -636,7 +647,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function addControlsToArray.
-   * 
+   *
    * Converts this FormElements controls/properties to an array that can be
    * used by Drupal Form API.
    *
@@ -654,7 +665,7 @@ class FormElement implements ArrayAccess {
 
   /**
    * Function addChildrenToArray.
-   * 
+   *
    * Converts this FormElements child FormElements to an array that can be used
    * by Drupal Form API.
    *
@@ -667,4 +678,31 @@ class FormElement implements ArrayAccess {
     }
   }
 
+  /**
+   * Get array of parents, similar to Drupal's '#parents'.
+   *
+   * Used to reliably access values posted back from the user.
+   *
+   * @return array
+   *   An array of indicies, including this element's, to use to access the
+   *   value for this element in $form_state['values'].
+   */
+  public function getParentsArray() {
+    if ($this->parent === NULL) {
+      // Should only be the top-level "form" element.
+      return array();
+    }
+    elseif (isset($this['#parents'])) {
+      // Potential optimization... Unlikely to hit?
+      return $this['#parents'];
+    }
+    else {
+      if (isset($this['#tree']) && $this['#tree']) {
+        return array_merge($this->parent->getParentsArray(), array($this->getIndex()));
+      }
+      else {
+        return array();
+      }
+    }
+  }
 }

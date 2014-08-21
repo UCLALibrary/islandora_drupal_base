@@ -132,7 +132,8 @@ class MimeDetect {
     'wbxml' => 'application/vnd.wap.wbxml',
     'xht' => 'application/xhtml+xml',
     'xhtml' => 'application/xhtml+xml',
-    'xsl' => 'text/xml',
+    'xsl' => 'text/xsl',
+    'xslt' => 'text/xsl',
     'xml' => 'text/xml',
     'csv' => 'text/csv',
     'tsv' => 'text/tab-separated-values',
@@ -191,6 +192,8 @@ class MimeDetect {
     "xyz" => "chemical/x-xyz",
     // PDB.
     "pdb" => "chemical/x-pdb",
+    // ChemDraw CDX.
+    'cdx' => 'chemical/x-cdx',
     // ChemDraw 3D.
     "c3d" => "chemical/x-chem3d",
     // ChemDraw file.
@@ -202,23 +205,17 @@ class MimeDetect {
     // GAMESS Input.
     "inp" => "chemical/x-gamess-input",
     // GAMESS Output.
-    "gam" => "chemical/x-gamess-input",
-    // General output file.
-    "out" => "application/octet-stream",
+    "gam" => "chemical/x-gamess-output",
     // Gaussian Cube.
     "cub" => "chemical/x-gaussian-cube",
     // Gaussian 98/03 Cartesian Input.
     "gau" => "chemical/x-gaussian-input",
-    // Corel Multimedia Manager v6 Album.
-    "gal" => "application/octet-stream",
     // JCAMP Spectroscopic Data Exchange Format.
     "jdx" => "chemical/x-jcamp-dx",
     // OpenDX Grid.
     "dx" => "chemical/x-jcamp-dx",
     // MOPAC Cartesian.
     "mop" => "chemical/x-mopac-input",
-    // General Input File.
-    "in" => "application/octet-stream",
     // Compressed formats:
     // (note: http://svn.cleancode.org/svn/email/trunk/mime.types)
     "tgz" => "application/x-gzip",
@@ -226,8 +223,11 @@ class MimeDetect {
     "tar" => "application/x-tar",
     "gtar" => "application/x-gtar",
     "zip" => "application/x-zip",
+    "rng" => "application/xml",
     // others:
     'bin' => 'application/octet-stream',
+    // Web Archives:
+    "warc" => "application/warc",
   );
   protected $protectedFileExtensions;
   protected $extensionExceptions = array(
