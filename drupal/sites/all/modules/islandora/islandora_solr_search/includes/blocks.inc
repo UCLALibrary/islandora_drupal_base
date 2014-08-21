@@ -176,14 +176,17 @@ function islandora_solr_simple_search_form($form, &$form_state) {
  *   An associative array containing form state.
  */
 function islandora_solr_simple_search_form_submit($form, &$form_state) {
-  $form_state['rebuild'] = TRUE;
-  $search_string = $form_state['values']['islandora_simple_search_query'];
-  // XXX: Shouldn't this use islandora_solr_replace_string()?
-  $search_string = str_replace('/', '~slsh~', $search_string);
+  module_load_include('inc', 'islandora_solr', 'includes/utilities');
+  $search_string = islandora_solr_replace_slashes($form_state['values']['islandora_simple_search_query']);
 
   $query = array('type' => 'dismax');
 
-  drupal_goto('islandora/search/' . $search_string, array('query' => $query));
+  $form_state['redirect'] = array(
+    ISLANDORA_SOLR_SEARCH_PATH . "/$search_string",
+    array(
+      'query' => $query,
+    ),
+  );
 }
 
 /**
@@ -235,7 +238,7 @@ function islandora_solr_advanced_search_form($form, &$form_state) {
 
     $values['terms'] = array();
 
-    $query_explode = explode(' ', $query);
+    $query_explode = preg_split(ISLANDORA_SOLR_QUERY_SPLIT_REGEX, $query);
 
     // Break up the solr query to populate the advanced search form.
     $i = 0;
@@ -245,9 +248,9 @@ function islandora_solr_advanced_search_form($form, &$form_state) {
       // Check for first colon to split the string.
       if (strpos($value, ':') != FALSE) {
         // Split the filter into field and value.
-        $value_split = explode(':', $value, 2);
+        $value_split = preg_split(ISLANDORA_SOLR_QUERY_FIELD_VALUE_SPLIT_REGEX, $value, 2);
 
-        $values['terms'][$i]['field'] = $value_split[0];
+        $values['terms'][$i]['field'] = stripslashes($value_split[0]);
 
         // Second part of the split is the query value (or first part of it).
         $value_split[1] = str_replace(array('(', ')'), '', $value_split[1]);
@@ -405,16 +408,15 @@ function _islandora_solr_advanced_search_terms($form, &$form_state) {
  * @see islandora_solr_advanced_search_form()
  */
 function islandora_solr_advanced_search_form_submit($form, &$form_state) {
-
+  module_load_include('inc', 'islandora_solr', 'includes/utilities');
   // Collect query values.
   $query_array = array();
   foreach ($form_state['values']['terms'] as $term) {
     $field = $term['field'];
     $search = trim($term['search']);
-    // XXX: Should probably use islandora_solr_replace_slashes().
-    $search = str_replace('/', '~slsh~', $search);
+    $search = islandora_solr_replace_slashes($search);
     $boolean = (isset($term['boolean'])) ? $term['boolean'] : variable_get('islandora_solr_search_boolean', 'user');
-
+    $field = islandora_solr_lesser_escape($field);
     // Add query.
     if (!empty($search)) {
       $query_array[] = array(
@@ -441,7 +443,7 @@ function islandora_solr_advanced_search_form_submit($form, &$form_state) {
   }
 
   // Navigate to results page.
-  drupal_goto('islandora/search/' . $query);
+  $form_state['redirect'] = ISLANDORA_SOLR_SEARCH_PATH . "/$query";
 }
 
 /**
@@ -466,7 +468,7 @@ function islandora_solr_display() {
 
     // Parameters set in URL.
     $params = isset($_islandora_solr_queryclass->internalSolrParams) ? $_islandora_solr_queryclass->internalSolrParams : array();
-    $path = ISLANDORA_SOLR_SEARCH_PATH . '/' . islandora_solr_replace_slashes($_islandora_solr_queryclass->solrQuery);
+    $path = current_path();
 
     $profiles = module_invoke_all("islandora_solr_primary_display");
     // Get the table settings.
@@ -551,15 +553,18 @@ function islandora_solr_sort() {
     // Parameters set in URL.
     $params = isset($_islandora_solr_queryclass->internalSolrParams) ? $_islandora_solr_queryclass->internalSolrParams : array();
 
-    $path = ISLANDORA_SOLR_SEARCH_PATH . '/' . islandora_solr_replace_slashes($_islandora_solr_queryclass->solrQuery);
+    $path = current_path();
 
     $sort_terms = islandora_solr_get_fields('sort_fields');
 
     // Get current sort (check in the actual parameters used for the query,
     // because modules might have altered it).
     if (isset($_islandora_solr_queryclass->solrParams['sort'])) {
-      $sort_explode = explode(' ', $_islandora_solr_queryclass->solrParams['sort']);
-      $current_sort_term = $sort_explode[0];
+      $sort_explode = preg_split(
+        ISLANDORA_SOLR_QUERY_SPLIT_REGEX,
+        $_islandora_solr_queryclass->solrParams['sort']
+      );
+      $current_sort_term = stripslashes($sort_explode[0]);
       $current_sort_order = isset($sort_explode[1]) ? $sort_explode[1] : NULL;
     }
     else {
