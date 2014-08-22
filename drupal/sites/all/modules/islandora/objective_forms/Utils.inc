@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Utility functions
+ * Utility functions.
  */
 
 module_load_include('inc', 'php_lib', 'Array');
@@ -25,7 +25,7 @@ function &find_element(array &$form, $hash) {
 
 /**
  * Function find_child_elements.
- * 
+ *
  * Recursively searches the Drupal Form elements children for the element that
  * matches the given hash.
  *
@@ -52,7 +52,7 @@ function &find_child_element(array &$form, $hash) {
 
 /**
  * Functin has_hash.
- * 
+ *
  * Checks to see if the given drupal form element has a #hash property and
  * checks to see if it matches the given hash.
  *
@@ -96,7 +96,7 @@ function form_element_name(array $element) {
 
 /**
  * Function form_element_is_child.
- * 
+ *
  * Compares two Drupal form element names to determine if the second
  * argument is a child element of the first.
  *

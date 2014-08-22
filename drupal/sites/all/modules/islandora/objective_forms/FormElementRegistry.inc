@@ -67,7 +67,7 @@ class FormElementRegistry {
 
   /**
    * Function registerDestroyed.
-   * 
+   *
    * Should this ever get called? Since this class holds references to every
    * object created.
    *
@@ -109,7 +109,7 @@ class FormElementRegistry {
 
   /**
    * Function isClone.
-   * 
+   *
    * Checks to see if the form element identified by its hash is a clone of
    * another form element.
    *
@@ -126,7 +126,7 @@ class FormElementRegistry {
 
   /**
    * Function hasAncestor.
-   * 
+   *
    * Checks if a FormElement has a ancestor it was cloned from at the given
    * depth.
    *
@@ -163,8 +163,8 @@ class FormElementRegistry {
   }
 
   /**
-   * Function setAncestory. 
-   * 
+   * Function setAncestory.
+   *
    * Sets the history for a given element and the hash of the element in which
    * it was cloned from.
    *
@@ -182,7 +182,7 @@ class FormElementRegistry {
 
   /**
    * Function getAncestor.
-   * 
+   *
    * Gets the ancestor this FormElement was cloned from at the given depth in
    * its cloned.
    *
@@ -226,7 +226,7 @@ class FormElementRegistry {
 
   /**
    * Function clearAncestory.
-   * 
+   *
    * Clears the ancestory of the given FormElement, or if no FormElement is
    * provided the ancestory of all FormElements will be clear.
    *

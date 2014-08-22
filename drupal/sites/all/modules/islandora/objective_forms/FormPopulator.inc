@@ -32,7 +32,7 @@ class FormPopulator {
 
   /**
    * Function populate.
-   * 
+   *
    * Populates a Drupal Form's elements #default_value properties with POST
    * data.
    *

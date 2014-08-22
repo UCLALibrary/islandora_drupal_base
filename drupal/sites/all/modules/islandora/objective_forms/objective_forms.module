@@ -8,7 +8,7 @@
 
 /**
  * Function Menu.
- * 
+ *
  * !TEST CODE -- Needed for some Simple Tests!
  */
 function objective_forms_menu() {
@@ -28,7 +28,7 @@ function objective_forms_menu() {
  *
  * @param string $form_name
  *   The name of the form
- * 
+ *
  * @return html
  *   Returns the html
  */
@@ -41,8 +41,8 @@ function objective_forms_test($form_name) {
 
 /**
  * Function test_load_files.
- * 
- * Include all the test files so we can find the proper function for getting 
+ *
+ * Include all the test files so we can find the proper function for getting
  * the file.
  */
 function objective_forms_test_load_files() {

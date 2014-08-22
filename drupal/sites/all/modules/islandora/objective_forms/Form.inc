@@ -3,7 +3,7 @@
 /**
  * @file
  * Defines a class that allows drupal forms to be built via objects instead of
- * arrays. Note that is still possible to build non functional drupal forms 
+ * arrays. Note that is still possible to build non functional drupal forms
  * using this class, the same rules apply that would normally apply to a Drupal
  * API
  * Form.
@@ -59,7 +59,7 @@ class Form implements ArrayAccess {
 
   /**
    * Function ajaxAlter.
-   * 
+   *
    * Apply ajax alters to the form.
    *
    * @var FormElementRegistry
@@ -91,7 +91,7 @@ class Form implements ArrayAccess {
 
   /**
    * Function hasElement.
-   * 
+   *
    * Checks to see if the FormElement identified by its unique $hash exists in
    * this form.
    *
@@ -124,7 +124,7 @@ class Form implements ArrayAccess {
 
   /**
    * Function duplicateOriginal.
-   * 
+   *
    * Duplicates a FormElement identified by its unique $hash from its original
    * definition.
    *

@@ -42,6 +42,8 @@ function islandora_compound_object_manage_form($form, &$form_state, $object) {
         '#type' => 'fieldset',
         '#title' => t('Remove Child Objects'),
         '#description' => t('Remove child objects of as part of this compound object'),
+        '#collapsed' => TRUE,
+        '#collapsible' => TRUE,
       );
 
       $header = array('title' => t('Title'), 'pid' => t('Object ID'));
@@ -109,7 +111,7 @@ function islandora_compound_object_manage_form($form, &$form_state, $object) {
 
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Submit'),
+    '#value' => t('Save'),
   );
 
   return $form;

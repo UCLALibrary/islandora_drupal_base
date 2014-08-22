@@ -30,9 +30,9 @@ N/A
 
 ### Usage
 
-The base ZIP/directory preprocessor can be called as a drush script (see `drush help islandora_batch_scan_preprocess` for additional parameters):
+The base ZIP/directory preprocessor can be called as a drush script (see `drush help islandora_book_batch_preprocess` for additional parameters):
 
-`drush -v --user=admin --uri=http://localhost islandora_batch_scan_preprocess --type=zip --target=/path/to/archive.zip`
+`drush -v --user=admin --uri=http://localhost islandora_book_batch_preprocess --type=zip --target=/path/to/archive.zip`
 
 This will populate the queue (stored in the Drupal database) with base entries.
 

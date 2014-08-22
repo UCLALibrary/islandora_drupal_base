@@ -21,7 +21,7 @@ function hook_islandora_compound_object_children_added_to_parent($objects, $pare
 /**
  * Notify other modules about the removal of objects from a compound.
  *
- * @param array $objects
+ * @param array $object
  *   An array of AbstractObjects removed from the parents.
  * @param array $parent_pids
  *   An array of PIDs representing the parents to which each object was added,
@@ -29,4 +29,13 @@ function hook_islandora_compound_object_children_added_to_parent($objects, $pare
  */
 function hook_islandora_compound_object_children_removed_from_parent($object, $parent_pids) {
 
+}
+
+/**
+ * Registry menu paths for the management controls for compound to appear on.
+ */
+function hook_islandora_compound_object_management_control_paths() {
+  return array(
+    'islandora/object/%/your/menu/path/here',
+  );
 }

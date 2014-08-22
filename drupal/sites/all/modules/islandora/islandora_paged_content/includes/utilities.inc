@@ -28,7 +28,8 @@ FROM <#ri>
 WHERE {
   ?pid <fedora-rels-ext:isMemberOf> <info:fedora/{$object->id}> ;
        <fedora-model:label> ?label ;
-       islandora-rels-ext:isSequenceNumber ?page .
+       islandora-rels-ext:isSequenceNumber ?page ;
+       <fedora-model:state> <fedora-model:Active> .
   OPTIONAL {
     ?pid <fedora-view:disseminates> ?dss .
     ?dss <fedora-view:disseminationType> <info:fedora/*/JP2> ;
@@ -294,6 +295,8 @@ function islandora_paged_content_can_derive(AbstractObject $object, $dsid) {
     'islandora:pageCModel',
     'islandora:bookPageCModel',
     'islandora:newspaperPageCModel',
+    'islandora:manuscriptCModel',
+    'islandora:manuscriptPageCModel',
   );
   if (array_intersect($to_derive, $object->models)) {
     $check_function = array(

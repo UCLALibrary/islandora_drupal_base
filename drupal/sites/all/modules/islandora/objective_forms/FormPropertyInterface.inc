@@ -13,7 +13,7 @@ interface FormPropertyInterface {
 
   /**
    * Function __constructor.
-   * 
+   *
    * Creates the FormProperty object from its scalar or array Drupal Form
    * Property value.
    *
