@@ -1554,26 +1554,38 @@ function minimum_metadata_ingest() {
   }
 
 
-  $collection = islandora_object_load($fedora_namespace . ":1");
+  $collection = islandora_object_load($fedora_namespace.':1');
+
 
   foreach ($manifest_file as $file_path) {
-    
+      
+   
     $file_path = trim($file_path);
+   
     
     if (_is_valid_extension($file_path)) {
+        
       
       $file_path = _url_encode_http_address($file_path);
       
       if (fopen($file_path, "r")) {
+          
 
         $file_name = basename($file_path);
-
+ 
         $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
+        
+       
         $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $collection->id);
 
-
-        _add_datastream_to_object($fedora_object, $file_path);
+        //First time use this method to add the digital object
+        _add_datastream_to_object($fedora_object, $file_path, true);
+        
+        //second time use this method to add the mods xml.
+         _add_datastream_to_object($fedora_object, $file_path,  false);
+         
         $ingest_results = islandora_add_object($fedora_object);
+        
 
 
         watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
@@ -1595,10 +1607,14 @@ function minimum_metadata_ingest() {
  * @param string $file_path
  *   Valid path to a file to be added as a datastream.
  */
-function _add_datastream_to_object($object, $file_path) {
+function _add_datastream_to_object($object, $file_path, $modsFlag) {
 
   $ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
-
+  if($modsFlag === true){
+      $ext = 'mp4';
+      $file_path = str_replace('/metadata/', '/video/', $file_path);
+      $file_path = str_replace('.xml', '', $file_path);
+  }
   if ($ext === 'tif') {
     _add_tiff_to_object($object, $file_path);
   }
@@ -1609,6 +1625,12 @@ function _add_datastream_to_object($object, $file_path) {
 
   if ($ext === 'pdf') {
     _add_pdf_to_object($object, $file_path);
+  }
+  if ($ext === 'mp4') {
+    _add_mp4_to_object($object, $file_path);
+  }
+  if ($ext === 'xml') {
+    _add_modsxml_to_object($object, $file_path);
   }
 
   return $object;
@@ -1636,6 +1658,14 @@ function _is_valid_extension($file_path) {
   if ($ext === 'pdf') {
     return true;
   }
+  
+  if ($ext === 'xml') {
+    return true;
+  }
+  
+  if ($ext === 'mp4') {
+    return true;
+  }
 
   return false;
 }
@@ -1659,6 +1689,29 @@ function _add_tiff_to_object($object, $tiff_path) {
 }
 
 /**
+ * Adds a tiff to the supplied object as the OBJ datastream.
+ *
+ * @param FedoraObject $object
+ *   The object you wish to add the datastream to.
+ *
+ * @param string $tiff_path
+ *   Valid path to a tiff file.
+ */
+function _add_mp4_to_object($object, $video_path) {
+  $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:sp_videoCModel');
+  $datastreamOBJ = $object->constructDatastream('OBJ', 'M');
+  $datastreamOBJ->label = "High Quality Video";
+  $datastreamOBJ->mimetype = "video/mp4";
+  $datastreamOBJ->setContentFromFile($video_path);
+  $object->ingestDatastream($datastreamOBJ);
+  $datastreamMP4 = $object->constructDatastream('MP4', 'M');
+  $datastreamMP4->label = "JWPlayer Video";
+  $datastreamMP4->mimetype = "video/mp4";
+  $datastreamMP4->setContentFromFile($video_path);
+  $object->ingestDatastream($datastreamMP4);
+}
+
+/**
  * Adds a PDF to the supplied object as the OBJ datastream.
  *
  * @param FedoraObject $object
@@ -1673,6 +1726,24 @@ function _add_pdf_to_object($object, $pdf_path) {
   $datastream->label = "PDF Document";
   $datastream->mimetype = "application/pdf";
   $datastream->setContentFromFile($pdf_path);
+  $object->ingestDatastream($datastream);
+}
+
+
+/**
+ * Adds a MODS xml to the supplied object as the OBJ datastream.
+ *
+ * @param FedoraObject $object
+ *   The object you wish to add the datastream to.
+ *
+ * @param string $mods_path
+ *   Valid path to a mods xml file.
+ */
+function _add_modsxml_to_object($object, $mods_path) {
+   $datastream = $object->constructDatastream('MODS', 'M');
+  $datastream->label = "MODS Record";
+  $datastream->mimetype = "text/xml";
+  $datastream->setContentFromFile($mods_path);
   $object->ingestDatastream($datastream);
 }
 
