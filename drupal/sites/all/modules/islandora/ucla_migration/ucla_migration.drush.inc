@@ -1703,12 +1703,7 @@ function _add_mp4_to_object($object, $video_path) {
   $datastreamOBJ->label = "High Quality Video";
   $datastreamOBJ->mimetype = "video/mp4";
   $datastreamOBJ->setContentFromFile($video_path);
-  $object->ingestDatastream($datastreamOBJ);
-  $datastreamMP4 = $object->constructDatastream('MP4', 'M');
-  $datastreamMP4->label = "JWPlayer Video";
-  $datastreamMP4->mimetype = "video/mp4";
-  $datastreamMP4->setContentFromFile($video_path);
-  $object->ingestDatastream($datastreamMP4);
+  $object->ingestDatastream($datastreamOBJ); 
 }
 
 /**
