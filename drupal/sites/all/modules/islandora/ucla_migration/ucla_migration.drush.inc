@@ -150,7 +150,7 @@ function ucla_migration_drush_command() {
   
   $items['ucla_migrate_min_metadata_with_mods'] = array(
     'callback' => 'minimum_metadata_ingest_with_mods',
-    'description' => 'Ingest content given digital assets but no metadata files.',
+    'description' => 'Ingest content given digital assets with mods files.',
     'options' => array(
       'fedora_namespace' => array(
         'description' => 'The Fedora namespace to update the datastreams under.',
