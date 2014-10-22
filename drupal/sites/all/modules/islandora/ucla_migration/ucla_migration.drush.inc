@@ -263,7 +263,8 @@ function ucla_migration_save_pids_for_namespace($fedora_namespace) {
 function update_DC_from_MODS_for_namespace(){
   $fedora_namespace = drush_get_option('fedora_namespace');
  $manifest_file_path = drush_get_option('manifest_file_path');
-  $add_mods_flag = drush_get_option('add_mods_flag');
+ // $add_mods_flag = drush_get_option('add_mods_flag');
+  $update_mods_flag = drush_get_option('update_mods_flag');
 
 
   $manifest_file = file($manifest_file_path);
@@ -278,10 +279,15 @@ function update_DC_from_MODS_for_namespace(){
     return;
   }
 
-if (!isset($add_mods_flag)) {
+/*if (!isset($add_mods_flag)) {
     drush_set_error('add_mods_flag flag not specified', '', 'Error: ');
     return;
-  }
+  }*/
+ 
+ if (!isset($update_mods_flag)) {
+    drush_set_error('update_mods_flag flag not specified', '', 'Error: ');
+    return;
+  } 
    
 
 
