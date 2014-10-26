@@ -347,7 +347,28 @@ function update_DC_from_MODS_for_namespace() {
       if (!(isset($object['MODS']) && !empty($object['MODS']))) {
         watchdog('UCLA Migration', "begin  No mods @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
         if ($add_mods_flag === 'true') {
-          watchdog('UCLA Migration', "begin  mods flag set to true @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
+            addMods($manifest_file,$object);
+
+
+        }
+      }
+      else {
+           if ($add_mods_flag === 'true') {
+           addMods($manifest_file,$object);
+           }else{
+        $mods_txt = $object['MODS']->content;
+        ucla_migration_add_dc_to_object_from_mods($object, $mods_txt);
+           }
+
+      }
+    }
+
+  }
+
+}
+
+function addMods($manifest_file,$object){
+              watchdog('UCLA Migration', "begin  mods flag set to true @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
           $title = $object->label;
           $title = str_replace('.xml', '', $title);
           $title = str_replace('.mp4', '', $title);
@@ -378,18 +399,6 @@ function update_DC_from_MODS_for_namespace() {
               }
             }
           }
-
-        }
-      }
-      else {
-        $mods_txt = $object['MODS']->content;
-        ucla_migration_add_dc_to_object_from_mods($object, $mods_txt);
-
-      }
-    }
-
-  }
-
 }
 
 /**
