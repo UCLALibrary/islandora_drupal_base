@@ -11,7 +11,7 @@ This module requires the following modules/libraries:
 * [Islandora](https://github.com/islandora/islandora)
 * [Tuque](https://github.com/islandora/tuque)
 
-**NOTE**: The collection solution pack requires that the resource index is enabled in Fedora, as it does all of its queries using the resource index.
+**NOTE**: The collection solution pack requires that the [resource index](https://wiki.duraspace.org/display/FEDORA37/Resource+Index) is enabled in Fedora, as it does all of its queries using the resource index.  
 
 ## Installation
 
@@ -33,7 +33,7 @@ Having problems or solved a problem? Check out the Islandora google groups for a
 ## Maintainers/Sponsors
 Current maintainers:
 
-* [Alan Stanley](https://github.com/ajstanley)
+* [William Panting](https://github.com/willtp87)
 
 ## Development
 

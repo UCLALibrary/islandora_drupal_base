@@ -28,7 +28,7 @@ function islandora_simple_workflow_permission() {
   return array(
     'bypass inactive object state' => array(
       'title' => t('Bypass default inactive object state'),
-      'description' => t('Islandora Simple Workflow sets ingested objects as inactive if enabled.'),
+      'description' => t('Islandora Simple Workflow sets ingested objects as active if enabled.'),
     ),
     'manage inactive objects' => array(
       'title' => t('Manage inactive objects'),

@@ -10,14 +10,6 @@ define('ISLANDORA_XACML_API_DATASTREAM_RULE', 'deny-dsid-mime');
 define('ISLANDORA_XACML_API_VIEWING_RULE', 'deny-access-functions');
 define('ISLANDORA_XACML_API_PERMIT_RULE', 'allow-everything-else');
 
-// @codingStandardsIgnoreStart
-// XXX: Remove this at some point in the future.
-define('MANAGEMENT_RULE', ISLANDORA_XACML_API_MANAGEMENT_RULE);
-define('DATASTREAM_RULE', ISLANDORA_XACML_API_DATASTREAM_RULE);
-define('VIEWING_RULE', ISLANDORA_XACML_API_VIEWING_RULE);
-define('PERMIT_RULE', ISLANDORA_XACML_API_PERMIT_RULE);
-// @codingStandardsIgnoreEnd
-
 /**
  * Implements hook_menu().
  */
@@ -313,16 +305,8 @@ function islandora_xacml_api_islandora_object_alter(AbstractObject $object, arra
       if (count($inherit) > 0) {
         $collection_object = islandora_object_load($inherit[0]['object']['value']);
         if ($collection_object['POLICY']) {
-          if (!$object['POLICY']) {
-            $xacml_datastream = $object->constructDatastream('POLICY', 'X');
-            $xacml_datastream->label = 'XACML Policy Stream';
-            $xacml_datastream->mimetype = 'text/xml';
-            $xacml_datastream->setContentFromString($collection_object['POLICY']->content);
-            $object->ingestDatastream($xacml_datastream);
-          }
-          else {
-            $object['POLICY']->content = $collection_object['POLICY']->content;
-          }
+          $xacml = new IslandoraXacml($object, $collection_object['POLICY']->content);
+          $xacml->writeBackToFedora();
         }
       }
       break;

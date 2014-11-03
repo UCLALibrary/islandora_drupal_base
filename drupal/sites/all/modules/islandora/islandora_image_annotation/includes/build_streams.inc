@@ -397,6 +397,7 @@ function islandora_image_annotation_get_image_dimensions_drupal($pid, $dsid, $up
     throw Exception('Could not find a datastream id to load for image height and width');
   }
   $object = islandora_object_load($pid);
+
   $image_file = file_save_data($object[$dsid]->content, 'temporary://');
   $real_path = drupal_realpath($image_file->uri);
   $info = image_get_info($real_path);
@@ -468,7 +469,8 @@ XML;
   else {
     // We assume entries do not exist as we have just tried to load this info.
     $rels_ds = $item['RELS-INT'];
-    $doc = DomDocument::loadXML($rels_ds->content);
+    $doc = new DOMDocument();
+    $doc->loadXML($rels_ds->content);
     $rdf = $doc->documentElement;
     $description = $doc->createElement('rdf:Description');
     $about = $doc->createAttribute('rdf:about');
@@ -489,21 +491,19 @@ XML;
 /**
  * Echoes Fedora streams for javascript retrieval.
  *
- * @global url $base_url
- *
  * @param string $pid
- *   The pid of a object.
- *
+ *   The pid of the object.
  * @param string $stream
- *   Which stream we are retrieving.
+ *   Which stream to serve.
  */
-function islandora_image_annotation_islandora_serve($pid, $stream, $width = NULL, $height = NULL) {
+function islandora_image_annotation_islandora_serve($pid, $stream) {
   global $base_url;
   module_load_include('inc', 'islandora_image_annotation', 'includes/utils');
   $dsid = islandora_image_annotation_get_dsid_from_model($pid);
   $doc_url = "$base_url/islandora/object/$pid/datastream/$dsid/view";
   $doc_path_url = "$base_url/islandora/anno/serve/$pid";
 
+  drupal_add_http_header('Content-Type', 'application/rdf+xml');
   if ($stream == 'Manifest') {
     $manifest = islandora_image_annotation_get_manifest($doc_url, $doc_path_url);
     echo $manifest;
@@ -527,24 +527,16 @@ function islandora_image_annotation_islandora_serve($pid, $stream, $width = NULL
 }
 
 /**
- * Generates uuid.
+ * Creates a UUID.
  *
- * @return uuid
- *   Returns the uuid.
+ * @return string
+ *   A UUID.
+ * @throws Exception
  */
 function islandora_image_annotation_get_uuid() {
-  $data;
-  // Module islandora_basic_collection is now
-  // a dependency of islandora_image_annotation.
-  try {
-    $connection = islandora_get_tuque_connection();
-    $configuration['id'] = $connection->repository->getNextIdentifier(NULL, TRUE);
-    $data = explode(":", $configuration['id']);
-  }
-  catch (Exception $e) {
-    throw $e;
-  }
-
+  $connection = islandora_get_tuque_connection();
+  $configuration['id'] = $connection->repository->getNextIdentifier(NULL, TRUE);
+  $data = explode(":", $configuration['id']);
   // Return just the uuid portion of the identifier.
   return $data[1];
 }

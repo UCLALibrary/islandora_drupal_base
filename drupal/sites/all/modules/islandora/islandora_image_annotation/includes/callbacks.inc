@@ -15,6 +15,9 @@
  *   The PID of a object.
  */
 function islandora_image_annotation_canvas_setup($pid) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   module_load_include('inc', 'islandora_image_annotation', 'includes/utils');
   drupal_json_output(islandora_image_annotation_canvas_init($pid));
 }
@@ -27,22 +30,24 @@ function islandora_image_annotation_canvas_setup($pid) {
  *   The pid of a object.
  */
 function islandora_image_annotation_add_annotation($pid) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   global $user;
   module_load_include('inc', 'islandora', 'includes/utilities');
-  $data = $_POST['data'];
+
   // todo: In the future, the following fix could be eliminated
   // by adding the 'stroke width' option to the annotation jquery dialog
   // box (as a combo box selection).
-  $stroke_width;
   if (isset($_POST['strokeWidth'])) {
-    $stroke_width = $_POST['strokeWidth'];
+    $stroke_width = check_plain($_POST['strokeWidth']);
   }
   else {
     $stroke_width = 0;
   }
-  $annotation_xml = islandora_image_annotation_shared_transform_annotation_list(urldecode($_POST['data']), 'html');
-  $color = $_POST['color'];
-  $type = $_POST['type'];
+  $annotation_xml = islandora_image_annotation_shared_transform_annotation_list(urldecode(check_plain($_POST['data'])), 'html');
+  $color = check_plain($_POST['color']);
+  $type = check_plain($_POST['type']);
   if (!$type) {
     $type = 'unclassified';
   }
@@ -96,7 +101,9 @@ function islandora_image_annotation_add_annotation($pid) {
  *   The transformed XML.
  */
 function islandora_image_annotation_shared_transform_annotation_list($xml_in, $input_type) {
-
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4', 'use theme("islandora_image_annotation") instead.');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   if ($xml_in == NULL || strlen($xml_in) < 5) {
     return " ";
   }
@@ -131,8 +138,10 @@ function islandora_image_annotation_shared_transform_annotation_list($xml_in, $i
  * @param array $pid
  *   An array of pids.
  */
-function islandora_image_annotation_shared_get_annotation_pids($pid) {
-
+function islandora_image_annotation_shared_get_annotation_pids($pid, $json_output = TRUE) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4', 'use theme("islandora_image_annotation") instead.');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   $query = <<<QUERY
     PREFIX io: <http://islandora.ca/ontology/relsext#>
     PREFIX fm: <info:fedora/fedora-system:def/model#>
@@ -171,7 +180,13 @@ QUERY;
   if (!empty($pids)) {
     $pids['types'] = array_values(array_unique($pids['types']));
   }
-  drupal_json_output($pids);
+  if ($json_output) {
+    drupal_json_output($pids);
+  }
+  else {
+    return $pids;
+  }
+
 }
 
 /**
@@ -184,13 +199,30 @@ QUERY;
  *   The XML content of the OAC datastream.
  */
 function islandora_image_annotation_get_annotation_data($pid) {
-  module_load_include('inc', 'fedora_repository', 'api/fedora_item');
-  $item = islandora_object_load($pid);
-  if (!isset($item)) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
+  $object = islandora_object_load($pid);
+  if (!isset($object)) {
     return;
   }
-  $annotation_xml = $item['OAC']->content;
-  return $annotation_xml;
+  // The old way of doing this, where a user posted urlencode data, then ran it
+  // through check_plain then urldecode, change the SVG characters so it could
+  // not be represented XML. Then the javascript code that will receive this is
+  // expecting it to still be messed up. So we mess it up here on purpose.
+  // For users of the old code. This was added post deprecation.
+  $annotation_xml = $object['OAC']->content;
+  $xml = simplexml_load_string($annotation_xml);
+  $is_svg_constraint = "rdf:type/@rdf:resource='http://www.w3.org/ns/openannotation/core/SvgConstraint'";
+  $results = $xml->xpath("//cnt:chars[preceding-sibling::$is_svg_constraint or following-sibling::$is_svg_constraint]");
+  foreach ($results as $result) {
+    $value = (string) $result;
+    $value = trim($value);
+    if (strpos($value, '&') !== 0) {
+      $result[0] = check_plain($value);
+    }
+  }
+  return $xml->asXML();
 }
 
 /**
@@ -205,6 +237,9 @@ function islandora_image_annotation_get_annotation_data($pid) {
  *   Urn.
  */
 function islandora_image_annotation_shared_get_annotation($pid, $urn = NULL) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   if (isset($urn)) {
     $pid = islandora_image_annotation_canvas_get_pid_from_urn($urn);
   }
@@ -214,7 +249,8 @@ function islandora_image_annotation_shared_get_annotation($pid, $urn = NULL) {
   // Remove the doc type declarations.
   $results = preg_replace('/<\?xml.*?\?>/', '', $results);
   $results = preg_replace('/<!DOCTYPE.*?>/', '', $results);
-  echo $results;
+  $results = htmlspecialchars_decode($results);
+  drupal_json_output($results);
 }
 
 /**
@@ -227,6 +263,9 @@ function islandora_image_annotation_shared_get_annotation($pid, $urn = NULL) {
  *   Urn.
  */
 function islandora_delete_annotation($pid, $urn) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   $pid_to_delete = islandora_image_annotation_canvas_get_pid_from_urn($urn);
   $item = islandora_object_load($pid_to_delete);
   islandora_delete_object($item);
@@ -244,6 +283,9 @@ function islandora_delete_annotation($pid, $urn) {
  *   An IslandoraRdfBuilder object.
  */
 function islandora_save_updated_annotations($pid, $rdf) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   $item = islandora_object_load($pid);
   $updated_annotation_list = $rdf->printRDF();
   $item['AnnotationList']->content = $updated_annotation_list;
@@ -259,6 +301,9 @@ function islandora_save_updated_annotations($pid, $rdf) {
  *   The pid retrived from an urn.
  */
 function islandora_image_annotation_canvas_get_pid_from_urn($urn) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   module_load_include('inc', 'islandora', 'includes/tuque');
   $connection = islandora_get_tuque_connection();
   $query = "select \$id  from <#ri> where \$id <http://islandora.ca/ontology/relsext#hasURN> \$urn
@@ -276,14 +321,17 @@ and \$urn <mulgara:is> 'urn:uuid:$urn'";
  * Called by Shared Canvas with ajax
  */
 function islandora_image_annotation_canvas_update_annotation() {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   $changed = FALSE;
   // Retrieve variables from POST.
-  $urn = urldecode($_POST['urn']);
-  $title = urldecode($_POST['title']);
-  $content = urldecode($_POST['content']);
-  $type = urldecode($_POST['annoType']);
-  $new_color = urldecode($_POST['color']);
-  $new_stroke_width = urldecode($_POST['strokeWidth']);
+  $urn = urldecode(check_plain($_POST['urn']));
+  $title = urldecode(check_plain($_POST['title']));
+  $content = urldecode(check_plain($_POST['content']));
+  $type = urldecode(check_plain($_POST['annoType']));
+  $new_color = urldecode(check_plain($_POST['color']));
+  $new_stroke_width = urldecode(check_plain($_POST['strokeWidth']));
   $pid = islandora_image_annotation_canvas_get_pid_from_urn($urn);
   $fedora_object = islandora_object_load($pid);
 
@@ -301,7 +349,7 @@ function islandora_image_annotation_canvas_update_annotation() {
   $target_value = (string) $target_node[0];
 
   // If color picking is allowed, update here.
-  if (!$optimized = variable_get('islandora_annotation_optimized', TRUE)) {
+  if (!$optimized = variable_get('islandora_image_annotation_choose_color', TRUE)) {
     $rels = $fedora_object->relationships->get(ISLANDORA_RELS_EXT_URI, 'hasColor');
     $old_color = (!empty($rels)) ? $rels[0]['object']['value'] : '';
     if (!empty($new_color) && $old_color != $new_color) {
@@ -358,39 +406,6 @@ function islandora_image_annotation_canvas_update_annotation() {
 }
 
 /**
- * Get type terms via solr.
- *
- * @return array
- *   Keys of the terms returned from solr.
- */
-function islandora_image_annotation_get_type_terms() {
-  $type_field = variable_get('annotation_type_search_field', 'anno_category_s');
-  $query = format_string('!field:("!content_model" OR "info:fedora/!content_model")', array(
-    '!field' => variable_get('islandora_solr_content_model_field', 'RELS_EXT_hasModel_uri_ms'),
-    '!content_model' => 'islandora:OACCModel',
-  ));
-
-  $params = array(
-    'fl' => "$type_field, PID",
-    'start' => '0',
-    'rows' => '10000',
-    'qt' => variable_get('islandora_solr_request_handler', ''),
-  );
-
-  $results = islandora_image_annotation_query_solr($query, $params);
-  $terms = array();
-  if (isset($results['solr_doc'])) {
-    foreach ($results['solr_doc'] as $doc) {
-      if (array_key_exists($type_field, $doc)) {
-        $terms[$doc[$type_field][0]] = 1;
-      }
-    }
-  }
-
-  return array_keys($terms);
-}
-
-/**
  * Return each solr doc found.
  *
  * @type string
@@ -399,11 +414,11 @@ function islandora_image_annotation_get_type_terms() {
  *   JSON string.
  */
 function islandora_image_annotation_get_title_terms($type) {
-  $title_field = variable_get('annotation_title_search_field', 'mads_titles_sv');
+  $title_field = variable_get('islandora_image_annotation_solr_field_title', 'mods_titleInfo_title_s');
   $solr = variable_get('islandora_solr_url', 'localhost:8080/solr');
   $data = array(
     'q' => format_string('!field:"!value"', array(
-      '!field' => variable_get('annotation_genre_field', 'mads_genre_it'),
+      '!field' => variable_get('islandora_image_annotation_solr_field_genre', 'mods_genre_s'),
       '!value' => $type,
     )),
     'fl' => "$title_field, PID",
@@ -437,6 +452,9 @@ function islandora_image_annotation_get_title_terms($type) {
  *   the identifier of the object to read the datatstream from
  */
 function islandora_image_annotation_get_mads_as_json($pid) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $message = islandora_deprecated('7.x-1.4');
+  watchdog('islandora_image_annotation', '@msg', array('@msg' => filter_xss($message)));
   $object = islandora_object_load($pid);
   if (!isset($object) || !isset($object['MADS'])) {
     echo 'error loading MADS datastream';
@@ -458,32 +476,4 @@ function islandora_image_annotation_get_mads_as_json($pid) {
   }
   echo json_encode($arr);
   exit();
-}
-
-/**
- * Helper function to query solr.
- *
- * @param string $query
- *   A query string.
- *
- * @param array $params
- *   An associate array containing solr params.
- */
-function islandora_image_annotation_query_solr($query, $params) {
-  $query_processor = new IslandoraSolrQueryProcessor();
-  $query_processor->solrQuery = $query;
-  foreach ($params as $field => $value) {
-    if ($field == 'start') {
-      $query_processor->solrStart = $value;
-    }
-    elseif ($field == 'rows') {
-      $query_processor->solrLimit = $value;
-    }
-    else {
-      $query_processor->solrParams[$field] = $value;
-    }
-  }
-  $query_processor->executeQuery(FALSE);
-  $results = $query_processor->islandoraSolrResult;
-  return $results;
 }

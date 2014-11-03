@@ -8,7 +8,7 @@
  * - $islandora_object: The Islandora object rendered in this template file.
  * - $islandora_binary_object_info: Information about the binary object.
  * - $islandora_thumbnail_img: The thumbnail image of the binary object.
- * - $islandora_File_storage_download: Download link for the object.
+ * - $islandora_binary_object_download: Download link for the object.
  * - $description: Defined metadata descripton for the object.
  * - $parent_collections: Parent collections of the object if applicable.
  * - $metadata: Rendered metadata display for the binary object.
