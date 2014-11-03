@@ -134,7 +134,6 @@ class MimeDetect {
     'xhtml' => 'application/xhtml+xml',
     'xsl' => 'text/xsl',
     'xslt' => 'text/xsl',
-    'xml' => 'text/xml',
     'csv' => 'text/csv',
     'tsv' => 'text/tab-separated-values',
     'txt' => 'text/plain',
@@ -223,7 +222,7 @@ class MimeDetect {
     "tar" => "application/x-tar",
     "gtar" => "application/x-gtar",
     "zip" => "application/x-zip",
-    "rng" => "application/xml",
+    "dat" => "application/octet-stream",
     // others:
     'bin' => 'application/octet-stream',
     // Web Archives:
