@@ -386,7 +386,7 @@ function addMods($manifest_file,$object){
 
               $file_path = _url_encode_http_address($file_path);
 
-              if (fopen($file_path, "r")) {
+             
 
 
                 $file_name = basename($file_path);
@@ -394,9 +394,10 @@ function addMods($manifest_file,$object){
                 $file_name = str_replace('.xml', '', $file_name);
 
                 if ($file_name === $title) {
+                  if (fopen($file_path, "r")) {
                   _add_modsxml_to_object($object, $file_path);
+                  }
                 }
-              }
             }
           }
 }
