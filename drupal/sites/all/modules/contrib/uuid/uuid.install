@@ -259,6 +259,7 @@ function uuid_update_7103() {
   }
   foreach (array_keys($uuids) as $entity_type) {
     $info = entity_get_info($entity_type);
+if (!isset($info['entity keys']['uuid'])) continue;
     $entity_ids = entity_get_id_by_uuid($entity_type, $uuids[$entity_type]);
     $entities = entity_load($entity_type, $entity_ids);
     foreach ($entities as $entity) {
