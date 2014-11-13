@@ -510,14 +510,17 @@ function islandora_solr_admin_settings($form, &$form_state) {
     '#description' => t('A default query used to browse Solr results when no explicit user query is set.
       Setting a useful default query allows the use of Solr to browse without having to enter a query.
       This may be used in conjunction with a background filter below.<br />
-      Consider using <strong>timestamp:[* TO NOW]</strong> or <strong>*:*</strong><br />'),
+      Consider using <strong>fgs_createdDate_dt:[* TO NOW]</strong> or <strong>*:*</strong><br />'),
     '#default_value' => variable_get('islandora_solr_base_query', '*:*'),
   );
   $form['islandora_solr_tabs']['query_defaults']['islandora_solr_base_sort'] = array(
     '#type' => 'textfield',
     '#title' => t('Sort field for default query'),
     '#size' => 30,
-    '#description' => t('Indicates which field should define the sort order for the default query.<br />For example: <strong>timestamp desc</strong>.<br /><strong>Note:</strong> not all fields are sortable. For more information, check the <a href="!url">Solr documentation</a>.', array('!url' => 'http://wiki.apache.org/solr/CommonQueryParameters#sort')),
+    '#description' => t('Indicates which field should define the sort order for the default query.<br />
+    For example: <strong>fgs_createdDate_dt desc</strong>.<br /><strong>Note:</strong> only single-valued fields are sortable.
+    For more information, check the <a href="!url">Solr documentation</a>.',
+      array('!url' => 'http://wiki.apache.org/solr/CommonQueryParameters#sort')),
     '#default_value' => variable_get('islandora_solr_base_sort', ''),
   );
   $form['islandora_solr_tabs']['query_defaults']['islandora_solr_base_filter'] = array(
@@ -787,7 +790,7 @@ function islandora_solr_admin_settings_fields(&$form_state, &$terms, $field_type
   else {
     $term = array();
     $count = count($fields);
-
+    $fields = array_values($fields);
     foreach ($fields as $key => $value) {
       $solr_field = $value['solr_field'];
 

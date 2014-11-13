@@ -15,6 +15,11 @@
  * help out.
  */
 class IslandoraScanBatch extends IslandoraBatchPreprocessor {
+
+  // Change to FALSE if one wants to take control over hierarchical structures.
+  // @todo Make zip scan respect this.
+  public $recursiveScan = TRUE;
+
   /**
    * Get a listing of "file-object"-like entries.
    *
@@ -59,13 +64,16 @@ class IslandoraScanBatch extends IslandoraBatchPreprocessor {
    */
   protected function scanDirectory($target) {
     $files = array();
-    $target_components = explode(DIRECTORY_SEPARATOR, $target);
-    $target = implode(DIRECTORY_SEPARATOR, $target_components);
-    $target_length = strlen($target) + 1;
-    foreach (file_scan_directory($target, $this->getPattern()) as $uri => $value) {
+    $target_path = drupal_realpath($target);
+    $target_length = strlen($target_path) + 1;
+    $directory_contents = file_scan_directory(
+      $target_path,
+      $this->getPattern(),
+      array('recurse' => $this->recursiveScan)
+    );
+    foreach ($directory_contents as $uri => $value) {
       $files[substr($uri, $target_length)] = $value;
     }
-
     return $files;
   }
 
@@ -190,7 +198,11 @@ class IslandoraScanBatch extends IslandoraBatchPreprocessor {
 class IslandoraScanBatchObject extends IslandoraBatchObject {
   protected $baseName;
   protected $objectInfo;
+  // Keys in objectInfo that are not to be datastreams.
+  public $objectInfoDatastreamExclusions = array('xml', 'mrc');
   protected $preprocessorParameters;
+  // Path to MODS->DC XSLT.
+  public $modsToDcTransform;
 
   /**
    * Constructor for the IslandoraScanBatchObject.
@@ -198,6 +210,7 @@ class IslandoraScanBatchObject extends IslandoraBatchObject {
   public function __construct(IslandoraTuque $connection, $base_name, $object_info, $preprocessor_parameters) {
     parent::__construct(NULL, $connection->repository);
 
+    $this->modsToDcTransform = drupal_get_path('module', 'islandora_batch') . '/transforms/mods_to_dc.xsl';
     $this->baseName = $base_name;
     $this->objectInfo = $object_info;
     $this->resources = array();
@@ -226,9 +239,7 @@ class IslandoraScanBatchObject extends IslandoraBatchObject {
     $this->getDc();
 
     if (!isset($this['OBJ'])) {
-      $meta = array_map(NULL, array('xml', 'mrc'));
-      $other = array_diff_key($this->objectInfo, $meta);
-
+      $other = array_diff_key($this->objectInfo, array_flip($this->objectInfoDatastreamExclusions));
       foreach ($other as $obj) {
         list($dsid, $mimetype) = static::determineDSIDAndMimetype($obj->filename);
         $obj_datastream = $this->constructDatastream($dsid);
@@ -352,8 +363,8 @@ class IslandoraScanBatchObject extends IslandoraBatchObject {
     if (!isset($this['MODS'])) {
       $dir = drupal_get_path('module', 'islandora_batch');
       // TODO: Create the MODS datastream on this object.
-      $mods_datastream = $this->constructDatastream('MODS', 'X');
-      $mods_datastream->mimetype = 'text/xml';
+      $mods_datastream = $this->constructDatastream('MODS', 'M');
+      $mods_datastream->mimetype = 'application/xml';
       $mods_datastream->label = 'MODS Record';
 
       // If we have an XML stream which is:
@@ -433,7 +444,7 @@ class IslandoraScanBatchObject extends IslandoraBatchObject {
       if (!isset($mods_datastream->content)) {
         // If we do not yet have any XML, create a dumb MODS with just the
         // title, and set it...
-        $title = $this->base_name;
+        $title = $this->baseName;
 
         $mods_datastream->content = <<<EOXML
 <mods xmlns:mods="http://www.loc.gov/mods/v3" xmlns="http://www.loc.gov/mods/v3">
@@ -454,9 +465,10 @@ EOXML;
    */
   protected function getDc() {
     if (!isset($this['DC'])) {
+      $ingest_dc = FALSE;
       // TODO: Create the DC datastream on this object.
-      $dc_datastream = $this->constructDatastream('DC', 'X');
-      $dc_datastream->mimetype = 'text/xml';
+      $dc_datastream = $this->constructDatastream('DC', 'M');
+      $dc_datastream->mimetype = 'application/xml';
       $dc_datastream->label = 'DC Record';
 
       if (isset($this->objectInfo['xml'])) {
@@ -467,6 +479,7 @@ EOXML;
           if ($s_xml->getName() == 'dc') {
             // XXX: Should probably create a resource entry.
             $dc_datastream->setContentFromFile($this->objectInfo['xml']->uri, FALSE);
+            $ingest_dc = TRUE;
           }
         }
       }
@@ -475,19 +488,26 @@ EOXML;
       if (!isset($dc_datastream->content)) {
         // XXX: Might want to make this use a file, instead of staging the DC
         // in the database table (inside the object we serialize).
-        $new_dc = static::runXslTransform(array(
-          'xsl' => drupal_get_path('module', 'islandora_batch') . '/transforms/mods_to_dc.xsl',
-          'input' => $this->getMods(),
-        ));
-        if ($new_dc) {
+        $mods_content = $this->getMods();
+        if ($mods_content) {
+          $new_dc = static::runXslTransform(
+            array(
+              'xsl' => $this->modsToDcTransform,
+              'input' => $mods_content,
+            )
+          );
+        }
+        if (isset($new_dc)) {
+          $ingest_dc = TRUE;
           $dc_datastream->content = $new_dc;
         }
       }
-
-      $this->ingestDatastream($dc_datastream);
+      if ($ingest_dc) {
+        $this->ingestDatastream($dc_datastream);
+      }
     }
 
-    return $this['DC']->content;
+    return isset($this['DC']) ? $this['DC']->content : FALSE;
   }
 
   /**

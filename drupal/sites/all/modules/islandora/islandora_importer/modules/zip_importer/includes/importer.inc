@@ -110,9 +110,9 @@ class ZipBatchImporter extends IslandoraBatchImporter {
   }
 
   /**
-   * Get the required info to pass into the file parameter of the constructor.
+   * Get the info for the source parameter for the itemClass factory.
    *
-   * @see IslandoraBatchImporter::getBatchInfo()
+   * @see IslandoraBatchImporterInterface::getBatchInfo()
    */
   public static function getBatchInfo(array &$form_state) {
     // Load the file.
@@ -133,7 +133,7 @@ class ZipBatchImporter extends IslandoraBatchImporter {
   }
 
   /**
-   * Get ingest info.
+   * Helper function for getting info on the zip file..
    *
    * @return array
    *   The ingest info.
@@ -180,6 +180,14 @@ class ZipBatchImportObject extends IslandoraImportObject {
   protected $mods;
   protected static $MARC2MODS;
   protected static $DC2MODS;
+  protected static $DWC2DC;
+
+  /**
+   * An AbstractObject for use in calling hooks... Should *NOT* be ingested.
+   *
+   * @var
+   */
+  protected $skeleton;
 
   /**
    * Constructor.
@@ -191,12 +199,16 @@ class ZipBatchImportObject extends IslandoraImportObject {
     $transform_path = drupal_get_path('module', 'zip_importer') . '/xsl';
     self::$MARC2MODS = "$transform_path/MARC21slim2MODS3-4.xsl";
     self::$DC2MODS = "$transform_path/simpleDC2MODS.xsl";
+    self::$DWC2DC = "$transform_path/dwc_to_dc.xsl";
+
+    $this->skeleton = islandora_get_tuque_connection()->repository->constructObject('temp:pid');
+    $this->skeleton->models = $this->contentModel;
   }
 
   /**
    * Get an item from the source.
    *
-   * @see IslandoraImportObject::getOne()
+   * @see IslandoraImportObjectInterface::getOne()
    */
   public static function getOne(&$info) {
     $record = array(
@@ -251,8 +263,9 @@ class ZipBatchImportObject extends IslandoraImportObject {
         }
       }
     }
+
     // Fire off to the derivative hook to get the primary DSID's.
-    $hook_output = islandora_invoke_hook_list(ISLANDORA_DERVIATIVE_CREATION_HOOK, $models, array());
+    $hook_output = islandora_invoke_hook_list(ISLANDORA_DERVIATIVE_CREATION_HOOK, $models, array($this->skeleton));
     $source_dsid = FALSE;
     foreach ($dsid as $arr_key => $key_val) {
       foreach ($hook_output as $hook_key => $hook_value) {
@@ -275,15 +288,27 @@ class ZipBatchImportObject extends IslandoraImportObject {
     $to_return = parent::getDatastreams($errors, $files);
 
     foreach ($this->source['object_info'] as $datastream => $name) {
+      $do_determine_dsid_and_mimetype = TRUE;
       if ($datastream == 'xml') {
-        // XML streams are handled via the parent implementation,
-        // (via get_{mods,dc}()) so let's go to the next item.
-        continue;
+
+        if ($this->isDWC($this->getXML())) {
+          // For Darwin Core file, datastream to DWC and skips the detection.
+          $do_determine_dsid_and_mimetype = FALSE;
+          $dsid = 'DWC';
+          $mimetype = 'text/xml';
+        }
+        else {
+          // XML streams are handled via the parent implementation,
+          // (via get_{mods,dc}()) so let's go to the next item.
+          continue;
+        }
       }
 
-      // Determine which stream this should be...  Uses the first matching, as
-      // as received from the DC-COMPOSITE.
-      list($dsid, $mimetype) = $this->determineDSIDAndMimetype($name);
+      if ($do_determine_dsid_and_mimetype) {
+        // Determine which stream this should be...  Uses the first matching, as
+        // as received from the DC-COMPOSITE.
+        list($dsid, $mimetype) = $this->determineDSIDAndMimetype($name);
+      }
 
       if (!$dsid) {
         $errors[] = array(
@@ -349,6 +374,9 @@ class ZipBatchImportObject extends IslandoraImportObject {
       elseif ($this->isDC($xml)) {
         $this->mods = static::runXSLTransform(array('input' => $xml, 'xsl' => self::$DC2MODS));
       }
+      elseif ($this->isDWC($xml)) {
+        $this->mods = static::runXSLTransform(array('input' => $this->getDC(), 'xsl' => self::$DC2MODS));
+      }
       if (empty($this->mods)) {
         // If we do not yet have any XML, create a dumb MODS with just the
         // title, and set it.
@@ -379,6 +407,9 @@ EOXML;
       if ($this->isDC($xml)) {
         $this->dc = $xml;
       }
+      elseif ($this->isDWC($xml)) {
+        $this->dc = static::runXSLTransform(array('input' => $xml, 'xsl' => self::$DWC2DC));
+      }
       // Otherwise, call the parent implementation (transform from MODS).
       if (empty($this->dc)) {
         parent::getDC();
@@ -403,6 +434,10 @@ EOXML;
     if (isset($this->source['object_info']['xml'])) {
       $xml_filename = $this->source['object_info']['xml'];
       $xml = $this->getXML();
+
+      if ($this->isDWC($datastream)) {
+        $dsid = 'DWC';
+      }
     }
     else {
       return "$dsid datastream";
@@ -419,6 +454,12 @@ EOXML;
         // If it was generated some other way we ignore it.
         $has_filename = $this->isDC($xml);
         return $use_filename && $has_filename ? $xml_filename : 'DC Record';
+
+      case "DWC":
+        // Check if a file was associated with DarwinCore.
+        // If it was generated some other way we ignore it.
+        $has_filename = $this->isDWC($xml);
+        return $use_filename && $has_filename ? $xml_filename : 'Darwin Core Record';
 
       default:
         if ($use_filename && isset($datastream['filename'])) {
@@ -467,6 +508,14 @@ EOXML;
    */
   protected function isDC($xml) {
     return $this->getLocalNameOfRootElement($xml) == 'dc';
+  }
+
+  /**
+   * Checks if the given file content is actually a Darwin Core document.
+   */
+  protected function isDWC($xml) {
+    $rootdoc = $this->getLocalNameOfRootElement($xml);
+    return (($rootdoc == 'DarwinRecordSet') || ($rootdoc == 'SimpleDarwinRecordSet'));
   }
 
   /**

@@ -159,12 +159,6 @@ function islandora_newspaper_islandora_required_objects(IslandoraTuque $connecti
   $newspaper_content_model->owner = 'fedoraAdmin';
   $newspaper_content_model->label = 'Islandora Newspaper Content Model';
   $newspaper_content_model->models = 'fedora-system:ContentModel-3.0';
-  // ISLANDORACM datastream.
-  $datastream = $newspaper_content_model->constructDatastream('ISLANDORACM', 'X');
-  $datastream->label = 'Islandora Newspaper Content Model';
-  $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/content_models/newspaperCModel.xml", FALSE);
-  $newspaper_content_model->ingestDatastream($datastream);
   // DS-COMPOSITE-MODEL datastream.
   $datastream = $newspaper_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'X');
   $datastream->label = 'DS-COMPOSITE-MODEL';
@@ -177,12 +171,6 @@ function islandora_newspaper_islandora_required_objects(IslandoraTuque $connecti
   $newspaper_issue_content_model->owner = 'fedoraAdmin';
   $newspaper_issue_content_model->label = 'Islandora Newspaper Issue Content Model';
   $newspaper_issue_content_model->models = 'fedora-system:ContentModel-3.0';
-  // ISLANDORACM datastream.
-  $datastream = $newspaper_issue_content_model->constructDatastream('ISLANDORACM', 'X');
-  $datastream->label = 'Islandora Newspaper Issue Content Model';
-  $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/content_models/newspaperIssueCModel.xml", FALSE);
-  $newspaper_issue_content_model->ingestDatastream($datastream);
   // DS-COMPOSITE-MODEL datastream.
   $datastream = $newspaper_issue_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'X');
   $datastream->label = 'DS-COMPOSITE-MODEL';
@@ -195,12 +183,6 @@ function islandora_newspaper_islandora_required_objects(IslandoraTuque $connecti
   $newspaper_page_content_model->owner = 'fedoraAdmin';
   $newspaper_page_content_model->label = 'Islandora Newspaper Page Content Model';
   $newspaper_page_content_model->models = 'fedora-system:ContentModel-3.0';
-  // ISLANDORACM datastream.
-  $datastream = $newspaper_page_content_model->constructDatastream('ISLANDORACM', 'X');
-  $datastream->label = 'Islandora Newspaper Page Content Model';
-  $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/content_models/newspaperPageCModel.xml", FALSE);
-  $newspaper_page_content_model->ingestDatastream($datastream);
   // DS-COMPOSITE-MODEL datastream.
   $datastream = $newspaper_page_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'X');
   $datastream->label = 'DS-COMPOSITE-MODEL';
@@ -386,11 +368,12 @@ function islandora_newspaper_islandora_newspaperpagecmodel_islandora_solr_object
 
       if (islandora_object_access(ISLANDORA_VIEW_OBJECTS, islandora_object_load($issue_pid))) {
         $search_results['object_url'] = "islandora/object/$issue_pid";
+        $search_results['object_url_fragment'] = "page/$page_number/mode/1up";
 
         // XXX: Won't handle fielded searches nicely... then again, if our
         // highlighting field is not the one being search on, this makes sense?
         if ($query_processor->solrDefType == 'dismax' || $query_processor->solrDefType == 'edismax') {
-          $search_results['object_url_fragment'] = "page/$page_number/mode/1up/search/" . rawurlencode($query_processor->solrQuery);
+          $search_results['object_url_fragment'] .= "/search/" . rawurlencode($query_processor->solrQuery);
         }
       }
     }
