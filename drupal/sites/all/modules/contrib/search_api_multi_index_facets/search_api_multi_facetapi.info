@@ -1,8 +1,0 @@
-name = Search API Multi FacetAPI
-description = Provides facetapi integration for search api multi
-dependencies[] = search_api_multi
-dependencies[] = facetapi
-files[] = plugins/facetapi/adapter.inc
-files[] = plugins/facetapi/query_type_date.inc
-files[] = plugins/facetapi/query_type_term.inc
-core = 7.x
