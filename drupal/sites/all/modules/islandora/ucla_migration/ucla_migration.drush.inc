@@ -22,6 +22,24 @@ function ucla_migration_drush_command() {
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
+  
+  $items['ucla_update_Label_from_DC_for_namespace'] = array(
+    'callback' => 'update_Label_from_DC_for_namespace',
+    'description' => 'convert dc from mods, if add_mods flag is set to true , ingest the MODS datastream along with DC datastream',
+    'arguments' => array(
+      'fedora_namespace' => array(
+        'description' => 'The Fedora namespace to update the datastreams under.',
+        'required' => 'true'
+      ),     
+
+    ),
+    'options' => array(),
+    'examples' => array(
+      'simple example' => 'drush -u 1 -l http://example.com ucla_save_pids_for_namespace your_namespace',
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+  );
+  
   $items['ucla_update_DC_from_MODS_for_namespace'] = array(
     'callback' => 'update_DC_from_MODS_for_namespace',
     'description' => 'convert dc from mods, if add_mods flag is set to true , ingest the MODS datastream along with DC datastream',
@@ -292,6 +310,65 @@ function ucla_migration_save_pids_for_namespace($fedora_namespace) {
  * @param type $add_mods_flag
  *  Flag to ingest MODS datastream
  */
+function update_Label_from_DC_for_namespace() {
+    $fedora_namespace = drush_get_option('fedora_namespace');
+    if (!isset($fedora_namespace)) {
+        drush_set_error('Fedora namespace not provided', 'A Fedora namespace to associate with the ingest must be provided', 'Error: ');
+        return;
+    }
+
+    // Get a connection to Fedora.
+    $connection = islandora_get_tuque_connection();
+    $repo = $connection->repository;
+
+    // SPARQL query to get all objects in a given namespace.
+    $query = "
+    SELECT ?obj
+    FROM <#ri>
+    WHERE {
+      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
+      FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:'))
+    }
+  ";
+
+    // Execute the query.
+    $results = $repo->ri->sparqlQuery($query);
+    watchdog('UCLA Migration', "begin 2 @results", array('@results' => $results), WATCHDOG_ERROR);
+
+    foreach ($results as $result) {
+        watchdog('UCLA Migration', "begin 3 @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
+        if ($result['obj']['value'] !== $fedora_namespace . ':1') {
+            watchdog('UCLA Migration', "begin 4 @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
+            $object = islandora_object_load($result['obj']['value']);
+            $dc_txt = $object['DC']->content;
+            $dc_xml = simplexml_load_string($dc_txt);
+
+            // Register namespaces of the root element.
+            $xml_namespaces = $dc_xml->getDocNamespaces();
+            $dc_xml->registerXPathNamespace('oai_dc', $xml_namespaces['oai_dc']);
+            $dc_xml->registerXPathNamespace('dc', $xml_namespaces['dc']);
+            watchdog('UCLA Migration', "begin Label @results", array('@results' => $object->label), WATCHDOG_ERROR);
+            $dc_query = "//dc:title[1]";
+            $dc_array = $dc_xml->xpath($dc_query);
+            watchdog('UCLA Migration', "begin dc title @results", array('@results' => $dc_array[0]->__toString()), WATCHDOG_ERROR);
+
+            $object->label = $dc_array[0]->__toString();
+        }
+    }
+}
+
+/**
+ *
+ * @param type $fedora_namespace
+ *  The namespace in Fedora to relate as the collection parent for the
+ *  import
+ *
+ * @param type $manifest_file_path
+ *  A path to a file containing a file path to a single asset on each line
+ *
+ * @param type $add_mods_flag
+ *  Flag to ingest MODS datastream
+ */
 function update_DC_from_MODS_for_namespace() {
   $fedora_namespace = drush_get_option('fedora_namespace');
   $manifest_file_path = drush_get_option('manifest_file_path');
@@ -348,8 +425,6 @@ function update_DC_from_MODS_for_namespace() {
         watchdog('UCLA Migration', "begin  No mods @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
         if ($add_mods_flag === 'true') {
             addMods($manifest_file,$object);
-
-
         }
       }
       else {
@@ -394,9 +469,10 @@ function addMods($manifest_file,$object){
                 $file_name = str_replace('.xml', '', $file_name);
 
                 if ($file_name === $title) {
-                  if (fopen($file_path, "r")) {
+                    watchdog('UCLA Migration', "match found @results", array('@results' => $file_name), WATCHDOG_ERROR);
+                  //if (fopen($file_path, "r")) {
                   _add_modsxml_to_object($object, $file_path);
-                  }
+                  //}
                 }
             }
           }
