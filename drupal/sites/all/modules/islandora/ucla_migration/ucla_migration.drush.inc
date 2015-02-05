@@ -2144,9 +2144,16 @@ function _add_pdf_to_object($object, $pdf_path) {
  *   Valid path to a mods xml file.
  */
 function _add_modsxml_to_object($object, $mods_path) {
-  $datastream = $object->constructDatastream('MODS', 'M');
-  $datastream->label = "MODS Record";
-  $datastream->mimetype = "text/xml";
+    // get mods datastream from object if exist or else create a new one add this logic
+      if (isset($object['MODS'])) {
+      $datastream = $object['MODS'];
+    }
+    else {
+      $datastream = $object->constructDatastream('MODS','M');
+      $datastream->label = "MODS Record";
+      $datastream->mimetype = "text/xml";
+    }
+  
   $datastream->setContentFromFile($mods_path);
   $object->ingestDatastream($datastream);
 
@@ -2154,7 +2161,6 @@ function _add_modsxml_to_object($object, $mods_path) {
   ucla_migration_add_dc_to_object_from_mods($object, $mods_file);
 
 }
-
 /**
  * Given a list of pids, purges the object from Fedora
  *
