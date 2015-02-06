@@ -467,6 +467,8 @@ function addMods($manifest_file,$object){
                 $file_name = basename($file_path);
                 $file_name = str_replace('.mp4', '', $file_name);
                 $file_name = str_replace('.xml', '', $file_name);
+                $file_name = str_replace('_MODS', '', $file_name);
+                
 
                 if ($file_name === $title) {
                     watchdog('UCLA Migration', "match found @results", array('@results' => $file_name), WATCHDOG_ERROR);
@@ -2145,6 +2147,7 @@ function _add_pdf_to_object($object, $pdf_path) {
  */
 function _add_modsxml_to_object($object, $mods_path) {
     // get mods datastream from object if exist or else create a new one add this logic
+      watchdog('Ingest Success', 'In add modsxml @file_name', array('@file_name' => $mods_path), WATCHDOG_ERROR);
       if (isset($object['MODS'])) {
       $datastream = $object['MODS'];
     }
@@ -2153,11 +2156,12 @@ function _add_modsxml_to_object($object, $mods_path) {
       $datastream->label = "MODS Record";
       $datastream->mimetype = "text/xml";
     }
-  
+  watchdog('Ingest Success', 'Found datastream @file_name', array('@file_name' => $mods_path), WATCHDOG_ERROR);
   $datastream->setContentFromFile($mods_path);
   $object->ingestDatastream($datastream);
 
   $mods_file = file_get_contents($mods_path);
+  watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $mods_file), WATCHDOG_ERROR);
   ucla_migration_add_dc_to_object_from_mods($object, $mods_file);
 
 }
