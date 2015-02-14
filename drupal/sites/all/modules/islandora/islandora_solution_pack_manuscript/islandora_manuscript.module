@@ -121,13 +121,13 @@ function islandora_manuscript_menu() {
     'islandora/manuscript/autocomplete/finding_aid/%menu_tail' => array(
       'title' => 'Finding Aid Autocomplete Callback',
       'page callback' => 'islandora_manuscript_autocomplete_finding_aid',
-      'page arguments' => array(3),
+      'page arguments' => array(4),
       'access arguments' => array(ISLANDORA_VIEW_OBJECTS),
       'load arguments' => array('%map', '%index'),
       'file' => 'includes/link.inc',
       'type' => MENU_CALLBACK,
     ),
-    'islandora/object/%islandora_object/manage/islandora_manuscript_ingest' => array(
+    'islandora/object/%islandora_object/manage/overview/islandora_manuscript_ingest' => array(
       'title' => 'Add a manuscript',
       'page callback' => 'islandora_manuscript_manuscript_ingest',
       'page arguments' => array(2),
@@ -144,7 +144,7 @@ function islandora_manuscript_menu() {
  */
 function islandora_manuscript_link_to_finding_aid_access_callback($object) {
   module_load_include('inc', 'islandora_manuscript', 'includes/link');
-  return $object instanceof AbstractObject && !islandora_manuscript_has_finding_aid_link($object) && islandora_datastream_access(ISLANDORA_METADATA_EDIT, $object['RELS-EXT']);
+  return $object instanceof AbstractObject && islandora_datastream_access(ISLANDORA_METADATA_EDIT, $object['RELS-EXT']);
 }
 
 /**
@@ -554,4 +554,51 @@ function islandora_manuscript_block_view($delta = '') {
       break;
   }
   return $block;
+}
+
+/**
+ * Implements hook_preprocess_islandora_object_print().
+ */
+function islandora_manuscript_preprocess_islandora_object_print(array &$variables) {
+  $object = $variables['object'];
+  if (in_array('islandora:manuscriptPageCModel', $object->models)) {
+    $url = url("islandora/object/{$object->id}", array('absolute' => TRUE));
+    $variables['content']['link'] = array(
+      '#weight' => -10,
+      '#markup' => t('Persistent link: !link', array('!link' => l($url, $url))),
+    );
+  }
+}
+
+/**
+ * Implements hook_process_islandora_object_print().
+ */
+function islandora_manuscript_process_islandora_object_print(array &$variables) {
+  $object = $variables['object'];
+  if (in_array('islandora:manuscriptPageCModel', $object->models)) {
+    $clip = isset($variables['clip']) ? $variables['clip'] : NULL;
+    $variables['content']['buttons'] = array(
+      '#access' => isset($clip),
+      '#prefix' => '<div>',
+      '#suffix' => '</div></br>',
+      '#weight' => -5,
+      'print' => array(
+        '#prefix' => '<strong>',
+        '#markup' => l(t('Print'), 'javascript:window.print();', array('external' => TRUE)),
+        '#suffix' => '</strong>',
+        '#weight' => -5,
+      ),
+      '0' => array(
+        '#markup' => ' | ',
+        '#weight' => -5,
+      ),
+      'download_clip' => array(
+        '#prefix' => '<strong>',
+        '#markup' => l(t('Download Image'), "islandora/object/{$object->id}/download_clip", array(
+          'query' => array('clip' => $clip))),
+        '#suffix' => '</strong>',
+        '#weight' => -5,
+      ),
+    );
+  }
 }
