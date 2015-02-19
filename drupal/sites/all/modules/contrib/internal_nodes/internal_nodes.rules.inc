@@ -1,4 +1,4 @@
- <?php
+<?php
 /**
  * @file
  * Internal nodes Rules Integration
