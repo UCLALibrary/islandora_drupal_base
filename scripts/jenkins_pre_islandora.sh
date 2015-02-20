@@ -6,7 +6,7 @@
 # Written by: Kevin S. Clarke <ksclarke@library.ucla.edu> #
 ###########################################################
 
-DRUPAL_SITES="default drupal_site_1 drupal_site_2 drupal_site_3 drupal_site_4 drupal_site_5 drupal_site_7"
+DRUPAL_SITES="default drupal_site_1 drupal_site_7"
 JENKINS_USER=devUser1
 WEB_USER=apache
 DRUPAL_HOME=/var/www/drupal
@@ -37,7 +37,7 @@ if [ $# -eq 2 ] ; then
   fi
 fi
 
-# Record the state of Drupal modules prior to new code update
+# Turn off all the Drupal modules (that can be turned off) before proceeding
 # Note: the db for the new site should have already been set up
 for SITE in ${DRUPAL_SITES}
 do
@@ -49,4 +49,5 @@ do
   if [ $? -ne 0 ] ; then
     exit $?
   fi
+  rm ${DRUPAL_HOME}/${SITE}-modules.txt
 done

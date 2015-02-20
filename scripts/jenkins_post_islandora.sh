@@ -6,7 +6,7 @@
 # Written by: Kevin S. Clarke <ksclarke@library.ucla.edu> #
 ###########################################################
 
-DRUPAL_SITES="default drupal_site_1 drupal_site_2 drupal_site_3 drupal_site_4 drupal_site_5 drupal_site_7"
+DRUPAL_SITES="default drupal_site_1 drupal_site_7"
 WEB_USER=apache
 DRUPAL_HOME=/var/www/drupal
 
@@ -15,12 +15,21 @@ if [ $# -eq 1 ] ; then
 fi
 
 # Still need to do this though...
-find /var/www/drupal -name files | xargs sudo chown -R apache:apache
+find $DRUPAL_HOME -name files | xargs sudo chown -R apache:apache
+find $DRUPAL_HOME -name settings.php | xargs sudo chown devUser1:apache
 
-# Reinstate original state of Drupal modules
+for FILE in $(find $DRUPAL_HOME -name files); do
+  sudo find $FILE -type d -exec chmod 775 {} +
+done
+
+for FILE in $(find $DRUPAL_HOME -name files); do
+  sudo find $FILE -type f -exec chmod 664 {} +
+done
+
+# Turn Drupal modules for the site back on again
 for SITE in ${DRUPAL_SITES}
 do
-  drush --verbose -y --root=${DRUPAL_HOME} -l ${SITE} en `cat ${DRUPAL_HOME}/${SITE}-modules.txt`
+  drush --verbose -y --root=${DRUPAL_HOME} -l ${SITE} en `cat /etc/drupal/${SITE}-modules.txt`
   if [ $? -ne 0 ] ; then
     exit $?
   fi
@@ -37,4 +46,5 @@ do
   if [ $? -ne 0 ] ; then
     exit $?
   fi
+  drush -y --root=${DRUPAL_HOME} -l ${SITE} cron
 done
