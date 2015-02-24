@@ -189,6 +189,10 @@ function ucla_migration_drush_command() {
         'description' => 'If true, remove existing Fedora objects in the namespace with the same filename/title.',
         'required' => 'true'
       ),
+      'digitalObject' => array(
+        'description' => 'Provide one of following choices (MODS,IMAGE,PDF,VIDEO)',
+        'required' => 'true'
+      ),  
     ),
     'examples' => array(
       'simple example' => 'drush -u 1 -l http://example.com ucla_migrate_min_medatata fedoranamespace /path/to/manifest/file.txt',
@@ -370,16 +374,11 @@ function update_Label_from_DC_for_namespace() {
  *  Flag to ingest MODS datastream
  */
 function update_DC_from_MODS_for_namespace() {
-  $fedora_namespace = drush_get_option('fedora_namespace');
-  $manifest_file_path = drush_get_option('manifest_file_path');
-  $add_mods_flag = drush_get_option('add_mods_flag');
+  $fedora_namespace = drush_get_option('fedora_namespace'); 
+  
 
 
-  $manifest_file = file($manifest_file_path);
-  if (!$manifest_file) {
-    drush_set_error('File not found', "Could not locate manifest file file $manifest_file_path", "Error: ");
-    return;
-  }
+  
 
 
   if (!isset($fedora_namespace)) {
@@ -387,11 +386,7 @@ function update_DC_from_MODS_for_namespace() {
     return;
   }
 
-  if (!isset($add_mods_flag)) {
-    drush_set_error('add_mods_flag flag not specified', '', 'Error: ');
-    return;
-  }
-
+  
 
   watchdog('UCLA Migration', "begin @results", array('@results' => $add_mods_flag), WATCHDOG_ERROR);
 
@@ -423,17 +418,13 @@ function update_DC_from_MODS_for_namespace() {
 
       if (!(isset($object['MODS']) && !empty($object['MODS']))) {
         watchdog('UCLA Migration', "begin  No mods @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
-        if ($add_mods_flag === 'true') {
-            addMods($manifest_file,$object);
-        }
+        
       }
       else {
-           if ($add_mods_flag === 'true') {
-           addMods($manifest_file,$object);
-           }else{
+          
         $mods_txt = $object['MODS']->content;
         ucla_migration_add_dc_to_object_from_mods($object, $mods_txt);
-           }
+           
 
       }
     }
@@ -442,43 +433,7 @@ function update_DC_from_MODS_for_namespace() {
 
 }
 
-function addMods($manifest_file,$object){
-              watchdog('UCLA Migration', "begin  mods flag set to true @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
-          $title = $object->label;
-          $title = str_replace('.xml', '', $title);
-          $title = str_replace('.mp4', '', $title);
-          $title = str_replace('.tif', '', $title);
-          $title = str_replace('.pdf', '', $title);
-          //create a mods datastream, which will update the dc record aswell
-          foreach ($manifest_file as $file_path) {
 
-
-            $file_path = trim($file_path);
-
-
-            if (_is_valid_extension($file_path)) {
-
-
-              $file_path = _url_encode_http_address($file_path);
-
-             
-
-
-                $file_name = basename($file_path);
-                $file_name = str_replace('.mp4', '', $file_name);
-                $file_name = str_replace('.xml', '', $file_name);
-                $file_name = str_replace('_MODS', '', $file_name);
-                
-
-                if ($file_name === $title) {
-                    watchdog('UCLA Migration', "match found @results", array('@results' => $file_name), WATCHDOG_ERROR);
-                  //if (fopen($file_path, "r")) {
-                  _add_modsxml_to_object($object, $file_path);
-                  //}
-                }
-            }
-          }
-}
 
 /**
  * Sets all datastreams for all objects in a Fedora namespace to versionable.
@@ -1928,6 +1883,7 @@ function minimum_metadata_ingest() {
   $fedora_namespace = drush_get_option('fedora_namespace');
   $manifest_file_path = drush_get_option('manifest_file_path');
   $overwrite = drush_get_option('overwrite');
+  $digitalObject = drush_get_option('digitalObject');
 
 
   $manifest_file = file($manifest_file_path);
@@ -1943,6 +1899,10 @@ function minimum_metadata_ingest() {
 
   if (!isset($overwrite)) {
     drush_set_error('Overwrite flag not specified', '', 'Error: ');
+    return;
+  }
+  if (!isset($digitalObject)) {
+    drush_set_error('Please specify one of the following for digitalObject (IMAGE , PDF, VIDEO, MODS)  not specified', '', 'Error: ');
     return;
   }
 
@@ -1965,7 +1925,7 @@ function minimum_metadata_ingest() {
         $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $collection->id);
 
 
-        _add_datastream_to_object($fedora_object, $file_path);
+        _add_datastream_to_object($fedora_object, $file_path,$digitalObject);
         $ingest_results = islandora_add_object($fedora_object);
 
 
@@ -2017,25 +1977,21 @@ function _add_datastream_mp4_and_mods_to_object($object, $file_path, $modsFlag) 
  * @param string $file_path
  *   Valid path to a file to be added as a datastream.
  */
-function _add_datastream_to_object($object, $file_path) {
+function _add_datastream_to_object($object, $file_path,$digitalObject) {
 
-  $ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+  //$ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
 
-  if ($ext === 'tif') {
+  if ($digitalObject === 'IMAGE') {
     _add_tiff_to_object($object, $file_path);
-  }
+  }  
 
-  if ($ext === 'tiff') {
-    _add_tiff_to_object($object, $file_path);
-  }
-
-  if ($ext === 'pdf') {
+  if ($digitalObject === 'PDF') {
     _add_pdf_to_object($object, $file_path);
   }
-  if ($ext === 'mp4') {
+  if ($digitalObject === 'VIDEO') {
     _add_mp4_to_object($object, $file_path);
   }
-  if ($ext === 'xml') {
+  if ($digitalObject === 'MODS') {
     _add_modsxml_to_object($object, $file_path);
   }
 
@@ -2162,7 +2118,7 @@ function _add_modsxml_to_object($object, $mods_path) {
 
   $mods_file = file_get_contents($mods_path);
   watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $mods_file), WATCHDOG_ERROR);
-  ucla_migration_add_dc_to_object_from_mods($object, $mods_file);
+ 
 
 }
 /**
