@@ -222,6 +222,29 @@ function ucla_migration_drush_command() {
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
+  
+  $items['ucla_migrate_images_with_mods'] = array(
+    'callback' => 'images_ingest_with_mods',
+    'description' => 'Ingest content given digital assets with mods files.',
+    'options' => array(
+      'fedora_namespace' => array(
+        'description' => 'The Fedora namespace to update the datastreams under.',
+        'required' => 'true'
+      ),
+      'manifest_file_path' => array(
+        'description' => 'The path to the file containing a list of assets to ingest. This is should be the mods file name and location',
+        'required' => 'true'
+      ),
+      'overwrite' => array(
+        'description' => 'If true, remove existing Fedora objects in the namespace with the same filename/title.',
+        'required' => 'true'
+      ),
+    ),
+    'examples' => array(
+      'simple example' => 'drush -u 1 -l http://example.com ucla_migrate_min_medatata fedoranamespace /path/to/manifest/file.txt',
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+  );
 
   $items['ucla_migrate_add_items_to_collection'] = array(
     'callback' => 'add_items_to_collection',
@@ -1749,6 +1772,107 @@ function _parse_number_range($range_values) {
   return $pid_numbers;
 }
 
+
+/**
+ *
+ *  A function to provide minimum metadata data for ingest of large numbers of
+ *  assets. Content type will be assumed based on the extension
+ *
+ *  TIF - Will use a large image content model
+ *  PDF - Will use the basic PDF content model
+ *  XML - MODS XML
+ *  MP4 - Will use video content model
+ *
+ *  The metadata attached to the content will be a MODS record containing the
+ *  following values
+ *
+ *  title : The filename of the file ingested
+ *  identifier : The filename of the file ingested
+ *
+ *  Both these values will be crosswalked to DC and available via triplestore
+ *  query
+ *
+ * @param type $fedora_namespace
+ *  The namespace in Fedora to relate as the collection parent for the minimal
+ *  import
+ *
+ * @param type $manifest_file_path
+ *  A path to a file containing a file path to a single asset on each line
+ *
+ * @param type $overwrite
+ *  If true, remove existing Fedora objects in this namespace with the same
+ * filename
+ *
+ *
+ */
+function images_ingest_with_mods() {
+
+  $fedora_namespace = drush_get_option('fedora_namespace');
+  $manifest_file_path = drush_get_option('manifest_file_path');
+  $overwrite = drush_get_option('overwrite');
+
+
+  $manifest_file = file($manifest_file_path);
+  if (!$manifest_file) {
+    drush_set_error('File not found', "Could not locate manifest file file $manifest_file_path", "Error: ");
+    return;
+  }
+
+  if (!isset($fedora_namespace)) {
+    drush_set_error('Fedora namespace not provided', 'A Fedora namespace to associate with the ingest must be provided', 'Error: ');
+    return;
+  }
+
+  if (!isset($overwrite)) {
+    drush_set_error('Overwrite flag not specified', '', 'Error: ');
+    return;
+  }
+
+
+  $collection = islandora_object_load($fedora_namespace . ':1');
+
+
+  foreach ($manifest_file as $file_path) {
+
+
+    $file_path = trim($file_path);
+
+
+    if (_is_valid_extension($file_path)) {
+
+
+      $file_path = _url_encode_http_address($file_path);
+
+      if (fopen($file_path, "r")) {
+
+
+        $file_name = basename($file_path);
+
+        $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
+
+
+        $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', $collection->id);
+
+        //First time use this method to add the digital object
+        _add_datastream_images_and_mods_to_object($fedora_object, $file_path, FALSE);
+
+        //second time use this method to add the mods xml.
+        _add_datastream_images_and_mods_to_object($fedora_object, $file_path, TRUE);
+
+
+        $ingest_results = islandora_add_object($fedora_object);
+
+
+        watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
+      }
+      else {
+        watchdog('Ingest Error', 'Child object ingest failed.', array(), WATCHDOG_ERROR);
+      }
+    }
+  }
+}
+
+
 /**
  *
  *  A function to provide minimum metadata data for ingest of large numbers of
@@ -1967,6 +2091,36 @@ function _add_datastream_mp4_and_mods_to_object($object, $file_path, $modsFlag) 
   return $object;
 }
 
+
+/**
+ * Determines datastream format based on Mime type and calls the appropriate
+ * function to attach the content
+ *
+ * @param FedoraObject $object
+ *   The object you wish to add the datastream to.
+ *
+ * @param string $file_path
+ *   Valid path to a file to be added as a datastream.
+ */
+function _add_datastream_images_and_mods_to_object($object, $file_path, $modsFlag) {
+
+  //$ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
+  if ($modsFlag === FALSE) {
+   
+    $file_path = str_replace('/mods/', '/Photos/', $file_path);
+    $file_pathTif = str_replace('.xml', '.tif', $file_path);
+    $file_pathJpeg = str_replace('.xml', '.jpg', $file_path);
+    _add_images_to_object($object, $file_pathTif, $file_pathJpeg);
+  }else{
+      _add_modsxml_to_object($object, $file_path);
+  }
+
+ 
+ 
+
+  return $object;
+}
+
 /**
  * Determines datastream format based on Mime type and calls the appropriate
  * function to attach the content
@@ -2030,6 +2184,42 @@ function _is_valid_extension($file_path) {
   }
 
   return FALSE;
+}
+
+/**
+ * Adds a tiff to the supplied object as the OBJ datastream.
+ *
+ * @param FedoraObject $object
+ *   The object you wish to add the datastream to.
+ *
+ * @param string $tiff_path
+ *   Valid path to a tiff file.
+ */
+function _add_images_to_object($object, $tiff_path,$jpeg_path) {
+   
+    if(fopen($tiff_path, 'r')){
+         $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:sp_large_image_cmodel');
+  $datastream = $object->constructDatastream('OBJ', 'M');
+         watchdog('Ingest Success', 'The file is tif @file_name', array('@file_name' => $tiff_path), WATCHDOG_ERROR);
+        $datastream->label = "High Quality Tiff";
+  $datastream->mimetype = "image/tiff";
+  $datastream->setContentFromFile($tiff_path);
+  $object->ingestDatastream($datastream);
+    }else{
+    if(fopen($jpeg_path, 'r')){
+         $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:sp_large_image_cmodel');
+  $datastream = $object->constructDatastream('OBJ', 'M');
+         watchdog('Ingest Success', 'The file is jpeg @file_name', array('@file_name' => $jpeg_path), WATCHDOG_ERROR);
+        $datastream->label = "High Quality JPEG";
+  $datastream->mimetype = "image/jpeg";
+  $datastream->setContentFromFile($jpeg_path);
+  $object->ingestDatastream($datastream);
+    }
+    }
+    
+  
+  
+  
 }
 
 /**
