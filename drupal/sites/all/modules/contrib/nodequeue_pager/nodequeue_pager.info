@@ -1,0 +1,8 @@
+; $Id$
+name = Nodequeue Pager
+description = Used to display a nodequeue pager on Node pages
+dependencies[] = nodequeue
+package = Nodequeue
+files[] = NodequeuePager.class.php
+configure = admin/structure/nodequeue
+core = "7.x"
