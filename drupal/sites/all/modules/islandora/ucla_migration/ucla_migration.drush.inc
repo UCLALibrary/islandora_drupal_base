@@ -172,7 +172,25 @@ function ucla_migration_drush_command() {
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
-
+$items['ucla_add_mods_to_digitalObject'] = array(
+     'callback' => 'add_mods_to_digitalObject',
+    'description' => 'Ingest content given digital assets but no metadata files.',
+    'options' => array(
+      'fedora_namespace' => array(
+        'description' => 'The Fedora namespace to update the datastreams under.',
+        'required' => 'true'
+      ),
+      'manifest_file_path' => array(
+        'description' => 'The path to the file containing a list of assets to ingest.',
+        'required' => 'true'
+      ),
+      
+    ),
+    'examples' => array(
+      'simple example' => 'drush -u 1 -l http://example.com ucla_migrate_min_medatata fedoranamespace /path/to/manifest/file.txt',
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+  );
   $items['ucla_migrate_min_metadata'] = array(
     'callback' => 'minimum_metadata_ingest',
     'description' => 'Ingest content given digital assets but no metadata files.',
@@ -2051,6 +2069,147 @@ function minimum_metadata_ingest() {
 
         _add_datastream_to_object($fedora_object, $file_path,$digitalObject);
         $ingest_results = islandora_add_object($fedora_object);
+
+
+        watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
+      }
+      else {
+        watchdog('Ingest Error', 'Child object ingest failed.', array(), WATCHDOG_ERROR);
+      }
+    }
+  }
+}
+
+function add_mods_to_digitalObject() {
+
+   $fedora_namespace = drush_get_option('fedora_namespace');
+  $manifest_file_path = drush_get_option('manifest_file_path');
+  
+
+
+  $manifest_file = file($manifest_file_path);
+  if (!$manifest_file) {
+    drush_set_error('File not found', "Could not locate manifest file file $manifest_file_path", "Error: ");
+    return;
+  }
+
+  if (!isset($fedora_namespace)) {
+    drush_set_error('Fedora namespace not provided', 'A Fedora namespace to associate with the ingest must be provided', 'Error: ');
+    return;
+  }
+ 
+
+
+ 
+ $connection = islandora_get_tuque_connection();
+    $repo = $connection->repository;
+
+  foreach ($manifest_file as $file_path) {
+
+    $file_path = trim($file_path);
+
+    if (_is_valid_extension($file_path)) {
+ watchdog('Reading manifest file', ' object @$file_path', array('@file_path' => $file_path), WATCHDOG_INFO);
+      $file_path = _url_encode_http_address($file_path);
+
+      if (fopen($file_path, "r")) {
+
+        $file_nameRaw = basename($file_path);
+        $file_name = str_replace(".xml", ".pdf", $file_nameRaw);
+       
+    // ITQL query to get all objects in a given namespace.
+    $query = "
+   select \$object from <#ri> where (
+\$object <fedora-model:label> '$file_name' and
+\$object <fedora-rels-ext:isMemberOfCollection> <info:fedora/$fedora_namespace:1>
+)
+  ";
+
+    // Execute the query.
+    $results = $repo->ri->itqlQuery($query);
+    $arr_length = count($results);
+    if(isset($results)){
+         $arr_length = count($results);
+         if($arr_length > 0){
+              foreach ($results as $result) {
+         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
+                $object = islandora_object_load($result['obj']['value']);
+                _add_datastream_to_object($object, $file_path,'MODS');
+    
+            }
+         }
+    }
+    
+  $file_name = strtolower($file_name); 
+  
+        // ITQL query to get all objects in a given namespace.
+    $query = "
+   select \$object from <#ri> where (
+\$object <fedora-model:label> '$file_name' and
+\$object <fedora-rels-ext:isMemberOfCollection> <info:fedora/$fedora_namespace:1>
+)
+  ";
+    $results = $repo->ri->itqlQuery($query);
+    $arr_length = count($results);
+    if(isset($results)){
+         $arr_length = count($results);
+         if($arr_length > 0){
+              foreach ($results as $result) {
+         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
+                $object = islandora_object_load($result['obj']['value']);
+                _add_datastream_to_object($object, $file_path,'MODS');
+    
+            }
+         }
+    }
+   $file_name = str_replace(".xml", ".tif", $file_nameRaw);
+        // ITQL query to get all objects in a given namespace.
+    $query = "
+   select \$object from <#ri> where (
+\$object <fedora-model:label> '$file_name' and
+\$object <fedora-rels-ext:isMemberOfCollection> <info:fedora/$fedora_namespace:1>
+)
+  ";
+    $results = $repo->ri->itqlQuery($query);
+    $arr_length = count($results);
+    if(isset($results)){
+         $arr_length = count($results);
+         if($arr_length > 0){
+              foreach ($results as $result) {
+         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
+                $object = islandora_object_load($result['obj']['value']);
+                _add_datastream_to_object($object, $file_path,'MODS');
+    
+            }
+         }
+    }
+    
+    $file_name = strtolower($file_name); 
+  
+        // ITQL query to get all objects in a given namespace.
+    $query = "
+   select \$object from <#ri> where (
+\$object <fedora-model:label> '$file_name' and
+\$object <fedora-rels-ext:isMemberOfCollection> <info:fedora/$fedora_namespace:1>
+)
+  ";
+    $results = $repo->ri->itqlQuery($query);
+    $arr_length = count($results);
+    if(isset($results)){
+         $arr_length = count($results);
+         if($arr_length > 0){
+              foreach ($results as $result) {
+         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
+                $object = islandora_object_load($result['obj']['value']);
+                _add_datastream_to_object($object, $file_path,'MODS');
+    
+            }
+         }
+    }    
+
+
+        
+    
 
 
         watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
