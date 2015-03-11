@@ -2103,7 +2103,19 @@ function add_mods_to_digitalObject() {
  
  $connection = islandora_get_tuque_connection();
     $repo = $connection->repository;
+// SPARQL query to get all objects in a given namespace.
+    $query = "
+    SELECT ?obj ?label
+    FROM <#ri>
+    WHERE {
+    ?obj <fedora-model:label> ?label ;
+      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
+      FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:'))
+    }
+  ";
 
+    // Execute the query.
+    $results = $repo->ri->sparqlQuery($query);
   foreach ($manifest_file as $file_path) {
 
     $file_path = trim($file_path);
@@ -2115,97 +2127,23 @@ function add_mods_to_digitalObject() {
       if (fopen($file_path, "r")) {
 
         $file_nameRaw = basename($file_path);
-        $file_name = str_replace(".xml", ".pdf", $file_nameRaw);
-       
-    // ITQL query to get all objects in a given namespace.
-    $query = "
-   select \$object from <#ri> where (
-\$object <fedora-model:label> '$file_name' and
-\$object <fedora-rels-ext:isMemberOfCollection> <info:fedora/$fedora_namespace:1>
-)
-  ";
-
-    // Execute the query.
-    $results = $repo->ri->itqlQuery($query);
-    $arr_length = count($results);
-    if(isset($results)){
-         $arr_length = count($results);
-         if($arr_length > 0){
-              foreach ($results as $result) {
-         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
+        $file_name = str_replace(".xml", "", $file_nameRaw);
+        $file_name = strtolower($file_name);
+       foreach ($results as $result) {
+           $label = $result['label']['value'];
+           $label = str_replace(".tif","", $label);
+           $label = str_replace(".pdf","", $label);
+           $label = str_replace(".TIF","", $label);
+           $label = strtolower($label);
+           if($file_name == $label){
+                watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_nameRaw), WATCHDOG_INFO);
                 $object = islandora_object_load($result['obj']['value']);
                 _add_datastream_to_object($object, $file_path,'MODS');
+           }
+           
+            
+       }
     
-            }
-         }
-    }
-    
-  $file_name = strtolower($file_name); 
-  
-        // ITQL query to get all objects in a given namespace.
-    $query = "
-   select \$object from <#ri> where (
-\$object <fedora-model:label> '$file_name' and
-\$object <fedora-rels-ext:isMemberOfCollection> <info:fedora/$fedora_namespace:1>
-)
-  ";
-    $results = $repo->ri->itqlQuery($query);
-    $arr_length = count($results);
-    if(isset($results)){
-         $arr_length = count($results);
-         if($arr_length > 0){
-              foreach ($results as $result) {
-         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
-                $object = islandora_object_load($result['obj']['value']);
-                _add_datastream_to_object($object, $file_path,'MODS');
-    
-            }
-         }
-    }
-   $file_name = str_replace(".xml", ".tif", $file_nameRaw);
-        // ITQL query to get all objects in a given namespace.
-    $query = "
-   select \$object from <#ri> where (
-\$object <fedora-model:label> '$file_name' and
-\$object <fedora-rels-ext:isMemberOfCollection> <info:fedora/$fedora_namespace:1>
-)
-  ";
-    $results = $repo->ri->itqlQuery($query);
-    $arr_length = count($results);
-    if(isset($results)){
-         $arr_length = count($results);
-         if($arr_length > 0){
-              foreach ($results as $result) {
-         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
-                $object = islandora_object_load($result['obj']['value']);
-                _add_datastream_to_object($object, $file_path,'MODS');
-    
-            }
-         }
-    }
-    
-    $file_name = strtolower($file_name); 
-  
-        // ITQL query to get all objects in a given namespace.
-    $query = "
-   select \$object from <#ri> where (
-\$object <fedora-model:label> '$file_name' and
-\$object <fedora-rels-ext:isMemberOfCollection> <info:fedora/$fedora_namespace:1>
-)
-  ";
-    $results = $repo->ri->itqlQuery($query);
-    $arr_length = count($results);
-    if(isset($results)){
-         $arr_length = count($results);
-         if($arr_length > 0){
-              foreach ($results as $result) {
-         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
-                $object = islandora_object_load($result['obj']['value']);
-                _add_datastream_to_object($object, $file_path,'MODS');
-    
-            }
-         }
-    }    
 
 
         
