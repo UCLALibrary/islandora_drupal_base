@@ -5,14 +5,14 @@ namespace('Drupal.media.browser');
 Drupal.behaviors.mediaLibrary = {
   attach: function (context, settings) {
     var library = new Drupal.media.browser.library(Drupal.settings.media.browser.library);
-    $('#media-browser-tabset').bind('tabsshow', function (event, ui) {
-      if (ui.tab.hash === '#media-tab-library') {
+    $('#media-browser-tabset').on('tabsactivate', function (event, ui) {
+      if (ui.newPanel.selector === '#media-tab-library') {
         // Grab the parameters from the Drupal.settings object
         var params = {};
         for (var parameter in Drupal.settings.media.browser.library) {
           params[parameter] = Drupal.settings.media.browser.library[parameter];
         }
-        library.start($(ui.panel), params);
+        library.start($(ui.newPanel), params);
         $('#scrollbox').bind('scroll', library, library.scrollUpdater);
       }
     });
@@ -85,10 +85,10 @@ Drupal.media.browser.library.prototype.loadMedia = function () {
 
 Drupal.media.browser.library.prototype.scrollUpdater = function (e){
   if (!e.data.loading) {
-    var scrollbox = $('#scrollbox');
-    var scrolltop = scrollbox.attr('scrollTop');
-    var scrollheight = scrollbox.attr('scrollHeight');
-    var windowheight = scrollbox.attr('clientHeight');
+    var scrollbox = document.getElementById('scrollbox');
+    var scrolltop = scrollbox.scrollTop;
+    var scrollheight = scrollbox.scrollHeight;
+    var windowheight = scrollbox.clientHeight;
     var scrolloffset = 20;
 
     if(scrolltop >= (scrollheight - (windowheight + scrolloffset))) {
