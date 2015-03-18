@@ -47,15 +47,7 @@ function ucla_migration_drush_command() {
       'fedora_namespace' => array(
         'description' => 'The Fedora namespace to update the datastreams under.',
         'required' => 'true'
-      ),
-      'manifest_file_path' => array(
-        'description' => 'The path to the file containing a list of assets to ingest.',
-        'required' => 'true'
-      ),
-      'add_mods_flag' => array(
-        'description' => 'If true, add MODS datastream to existing Fedora objects in the namespace with the same filename/title.',
-        'required' => 'true'
-      ),
+      ), 
 
     ),
     'options' => array(),
@@ -2100,22 +2092,26 @@ function add_mods_to_digitalObject() {
  
 
 
- 
+ watchdog('UCLA Migration', "begin 1 @results", array('@results' => $fedora_namespace), WATCHDOG_ERROR);
  $connection = islandora_get_tuque_connection();
+ watchdog('UCLA Migration', "begin 2 @results", array('@results' => $connection), WATCHDOG_ERROR);
     $repo = $connection->repository;
+    watchdog('UCLA Migration', "begin 3 @results", array('@results' => $repo), WATCHDOG_ERROR);
 // SPARQL query to get all objects in a given namespace.
     $query = "
     SELECT ?obj ?label
     FROM <#ri>
-    WHERE {
-    ?obj <fedora-model:label> ?label ;
-      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
+    WHERE {    
+      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
+ ?obj <fedora-model:label> ?label .
       FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:'))
     }
   ";
-
+    
+watchdog('UCLA Migration', "begin 4 @results", array('@results' => $query), WATCHDOG_ERROR);
     // Execute the query.
     $results = $repo->ri->sparqlQuery($query);
+    watchdog('UCLA Migration', "begin 5 @results", array('@results' => $results), WATCHDOG_ERROR);
   foreach ($manifest_file as $file_path) {
 
     $file_path = trim($file_path);
@@ -2134,6 +2130,7 @@ function add_mods_to_digitalObject() {
            $label = str_replace(".tif","", $label);
            $label = str_replace(".pdf","", $label);
            $label = str_replace(".TIF","", $label);
+           $label = str_replace(".xml","", $label);
            $label = strtolower($label);
            if($file_name == $label){
                 watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_nameRaw), WATCHDOG_INFO);
