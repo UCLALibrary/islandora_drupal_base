@@ -41,13 +41,13 @@ fi
 # Note: the db for the new site should have already been set up
 for SITE in ${DRUPAL_SITES}
 do
-  drush -y -r ${DRUPAL_HOME} -l ${SITE} pml --status=enabled --type=module --no-core --pipe > ${DRUPAL_HOME}/${SITE}-modules.txt
+  drush -y -r ${DRUPAL_HOME} -l ${SITE} pml --status=enabled --type=module --no-core --pipe > ${DRUPAL_HOME}/${SITE}-modules.tmp
   if [ $? -ne 0 ] ; then
     exit $?
   fi
-  drush -y -r ${DRUPAL_HOME} -l ${SITE} dis `cat ${DRUPAL_HOME}/${SITE}-modules.txt`
+  drush -y -r ${DRUPAL_HOME} -l ${SITE} dis `cat ${DRUPAL_HOME}/${SITE}-modules.tmp`
   if [ $? -ne 0 ] ; then
     exit $?
   fi
-  rm ${DRUPAL_HOME}/${SITE}-modules.txt
+  rm ${DRUPAL_HOME}/${SITE}-modules.tmp
 done
