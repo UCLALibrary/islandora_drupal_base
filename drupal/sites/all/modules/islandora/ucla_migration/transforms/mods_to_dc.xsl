@@ -40,7 +40,7 @@ Version 1.0	2007-05-04 Tracy Meehleib <tmee@loc.gov>
 	<xsl:output method="xml" indent="yes"/>
 	<xsl:strip-space elements="*"/>
 	<xsl:template match="/">
-		<<xsl:choose>
+		<xsl:choose>
 		<xsl:when test="//mods:modsCollection">			
 			<srw_dc:dcCollection xsi:schemaLocation="info:srw/schema/1/dc-schema http://www.loc.gov/standards/sru/dc-schema.xsd">
 				<xsl:apply-templates/>
