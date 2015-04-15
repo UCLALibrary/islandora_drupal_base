@@ -2092,7 +2092,9 @@ function delete_fedoraObject_by_nameSpace(){
      }
      // Get a connection to Fedora.
   $connection = islandora_get_tuque_connection();
+  watchdog('Delete step 1 connection object', ' @file_name', array('@file_name' => $connection), WATCHDOG_ERROR);
   $repo = $connection->repository;
+  watchdog('Delete step 2 connection object', ' @file_name', array('@file_name' => $repo), WATCHDOG_ERROR);
 
   // SPARQL query to get all objects in a given namespace.
   $query =
@@ -2104,16 +2106,21 @@ function delete_fedoraObject_by_nameSpace(){
       FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:'))
     }
   ";
-
+watchdog('Delete step 3 connection object', ' @file_name', array('@file_name' => $query), WATCHDOG_ERROR);
   // Execute the query.
   $results = $repo->ri->sparqlQuery($query);
 
-  
+  watchdog('Delete step 4 connection object', ' @file_name', array('@file_name' => var_dump($results)), WATCHDOG_ERROR);
+  $pids = array();
   foreach ($results as $result) {
-      if ($result['obj']['value'] !== $fedora_namespace . ':1') {
-    _purge_object_by_pid($result['obj']['value']);
-      }
+      watchdog('Delete step 4 in foreach', ' @file_name', array('@file_name' => var_dump($result)), WATCHDOG_ERROR);
+       if ($result['obj']['value'] !== $fedora_namespace . ':1') {
+    array_push($pids, $result['obj']['value']);
+       }
+    
   }
+  _purge_object_by_pid($pids);
+  
      
 }
 
