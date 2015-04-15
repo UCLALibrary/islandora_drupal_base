@@ -2117,7 +2117,7 @@ watchdog('UCLA Migration', "begin 4 @results", array('@results' => $query), WATC
     $file_path = trim($file_path);
 
     if (_is_valid_extension($file_path)) {
- watchdog('Reading manifest file', ' object @$file_path', array('@file_path' => $file_path), WATCHDOG_INFO);
+ watchdog('Reading manifest file', ' object @$file_path', array('@file_path' => $file_path), WATCHDOG_ERROR);
       $file_path = _url_encode_http_address($file_path);
 
       if (fopen($file_path, "r")) {
@@ -2133,21 +2133,15 @@ watchdog('UCLA Migration', "begin 4 @results", array('@results' => $query), WATC
            $label = str_replace(".xml","", $label);
            $label = strtolower($label);
            if($file_name == $label){
-                watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_nameRaw), WATCHDOG_INFO);
+                watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_nameRaw), WATCHDOG_ERROR);
                 $object = islandora_object_load($result['obj']['value']);
+               // $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:sp_large_image_cmodel');
                 _add_datastream_to_object($object, $file_path,'MODS');
            }
            
             
        }
-    
-
-
-        
-    
-
-
-        watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $file_name), WATCHDOG_INFO);
+        watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
       }
       else {
         watchdog('Ingest Error', 'Child object ingest failed.', array(), WATCHDOG_ERROR);
@@ -2397,12 +2391,12 @@ function _add_modsxml_to_object($object, $mods_path) {
       $datastream->mimetype = "text/xml";
     }
   watchdog('Ingest Success', 'Found datastream @file_name', array('@file_name' => $mods_path), WATCHDOG_ERROR);
-  $datastream->setContentFromFile($mods_path);
-  $object->ingestDatastream($datastream);
-
+  //$datastream->setContentFromFile($mods_path);
   $mods_file = file_get_contents($mods_path);
-  watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $mods_file), WATCHDOG_ERROR);
- 
+  $datastream->content = $mods_file;
+  $object->ingestDatastream($datastream);
+  
+  watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $mods_file), WATCHDOG_ERROR); 
 
 }
 /**
