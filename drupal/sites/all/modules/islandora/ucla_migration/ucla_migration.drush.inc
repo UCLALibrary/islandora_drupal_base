@@ -22,7 +22,18 @@ function ucla_migration_drush_command() {
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
-  
+  $items['ucla_delete_fedoraObject_by_nameSpace'] = array(
+    'callback' => 'delete_fedoraObject_by_nameSpace',
+    'description' => 'delete all the objects in a given namespace',
+    'arguments' => array(
+      'fedora_namespace' => "The Fedora namespace whose PIDS you're looking for.",
+    ),
+    'options' => array(),
+    'examples' => array(
+      'simple example' => 'drush -u 1 -l http://example.com ucla_save_pids_for_namespace your_namespace',
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+  );
   $items['ucla_update_Label_from_DC_for_namespace'] = array(
     'callback' => 'update_Label_from_DC_for_namespace',
     'description' => 'convert dc from mods, if add_mods flag is set to true , ingest the MODS datastream along with DC datastream',
@@ -1282,7 +1293,8 @@ function ucla_migration_add_dc_to_object_from_mods($object, $mods_txt) {
       $datastream->mimetype = "text/xml";
     }
 
-    $datastream->setContentFromString($dc_txt);
+    //$datastream->setContentFromString($dc_txt);
+    $datastream->content= $dc_txt;
     $object->ingestDatastream($datastream);
   } catch (Exception $e) {
 
@@ -2070,6 +2082,39 @@ function minimum_metadata_ingest() {
       }
     }
   }
+}
+
+function delete_fedoraObject_by_nameSpace(){
+     $fedora_namespace = drush_get_option('fedora_namespace');
+     if (!isset($fedora_namespace)) {
+        drush_set_error('Fedora namespace not provided', 'A Fedora namespace to associate with the ingest must be provided', 'Error: ');
+        return;
+     }
+     // Get a connection to Fedora.
+  $connection = islandora_get_tuque_connection();
+  $repo = $connection->repository;
+
+  // SPARQL query to get all objects in a given namespace.
+  $query =
+    "
+    SELECT ?obj
+    FROM <#ri>
+    WHERE {
+      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
+      FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:'))
+    }
+  ";
+
+  // Execute the query.
+  $results = $repo->ri->sparqlQuery($query);
+
+  
+  foreach ($results as $result) {
+      if ($result['obj']['value'] !== $fedora_namespace . ':1') {
+    _purge_object_by_pid($result['obj']['value']);
+      }
+  }
+     
 }
 
 function add_mods_to_digitalObject() {
