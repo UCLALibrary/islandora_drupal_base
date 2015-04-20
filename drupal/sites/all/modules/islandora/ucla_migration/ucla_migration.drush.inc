@@ -2220,8 +2220,7 @@ watchdog('Ingest Success filename', ' object @file_name', array('@file_name' => 
            $label = str_replace("_MODS","", $label);
            $label = str_replace("_TEI","", $label);
             $label = str_replace("_tei","", $label);
-           $label = strtolower($label);
-           watchdog('Ingest Success label', ' object @file_name', array('@file_name' => $label), WATCHDOG_ERROR);
+           $label = strtolower($label);          
            if($file_name == $label){
                 watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_nameRaw), WATCHDOG_ERROR);
                 $object = islandora_object_load($result['obj']['value']);
