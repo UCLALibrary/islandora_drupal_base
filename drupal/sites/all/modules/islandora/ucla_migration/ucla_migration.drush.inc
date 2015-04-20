@@ -194,6 +194,30 @@ $items['ucla_add_mods_to_digitalObject'] = array(
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
   );
+
+$items['ucla_add_dataStream_to_digitalObject'] = array(
+     'callback' => 'add_dataStream_to_digitalObject',
+    'description' => 'Ingest content given digital assets but no metadata files.',
+    'options' => array(
+      'fedora_namespace' => array(
+        'description' => 'The Fedora namespace to update the datastreams under.',
+        'required' => 'true'
+      ),
+      'manifest_file_path' => array(
+        'description' => 'The path to the file containing a list of assets to ingest.',
+        'required' => 'true'
+      ),
+      'digitalObject' => array(
+        'description' => 'Provide one of following choices (MODS,IMAGE,PDF,VIDEO,TEI)',
+        'required' => 'true'
+      ),   
+      
+    ),
+    'examples' => array(
+      'simple example' => 'drush -u 1 -l http://example.com ucla_migrate_min_medatata fedoranamespace /path/to/manifest/file.txt',
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+  );
   $items['ucla_migrate_min_metadata'] = array(
     'callback' => 'minimum_metadata_ingest',
     'description' => 'Ingest content given digital assets but no metadata files.',
@@ -2123,7 +2147,95 @@ watchdog('Delete step 3 connection object', ' @file_name', array('@file_name' =>
   
      
 }
+function add_dataStream_to_digitalObject(){
+    
+   $fedora_namespace = drush_get_option('fedora_namespace');
+  $manifest_file_path = drush_get_option('manifest_file_path');
+  $digitalObject = drush_get_option('digitalObject');
 
+
+  
+  if (!isset($digitalObject)) {
+    drush_set_error('Please specify one of the following for digitalObject (IMAGE , PDF, VIDEO, MODS, TEI)  not specified', '', 'Error: ');
+    return;
+  }
+
+
+  $manifest_file = file($manifest_file_path);
+  if (!$manifest_file) {
+    drush_set_error('File not found', "Could not locate manifest file file $manifest_file_path", "Error: ");
+    return;
+  }
+
+  if (!isset($fedora_namespace)) {
+    drush_set_error('Fedora namespace not provided', 'A Fedora namespace to associate with the ingest must be provided', 'Error: ');
+    return;
+  }
+ 
+
+
+ watchdog('UCLA Migration', "begin 1 @results", array('@results' => $fedora_namespace), WATCHDOG_ERROR);
+ $connection = islandora_get_tuque_connection();
+ watchdog('UCLA Migration', "begin 2 @results", array('@results' => $connection), WATCHDOG_ERROR);
+    $repo = $connection->repository;
+    watchdog('UCLA Migration', "begin 3 @results", array('@results' => $repo), WATCHDOG_ERROR);
+// SPARQL query to get all objects in a given namespace.
+    $query = "
+    SELECT ?obj ?label
+    FROM <#ri>
+    WHERE {    
+      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
+ ?obj <fedora-model:label> ?label .
+      FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:'))
+    }
+  ";
+    
+watchdog('UCLA Migration', "begin 4 @results", array('@results' => $query), WATCHDOG_ERROR);
+    // Execute the query.
+    $results = $repo->ri->sparqlQuery($query);
+    watchdog('UCLA Migration', "begin 5 @results", array('@results' => $results), WATCHDOG_ERROR);
+  foreach ($manifest_file as $file_path) {
+
+    $file_path = trim($file_path);
+
+    if (_is_valid_extension($file_path)) {
+ watchdog('Reading manifest file', ' object @$file_path', array('@file_path' => $file_path), WATCHDOG_ERROR);
+      $file_path = _url_encode_http_address($file_path);
+
+      if (fopen($file_path, "r")) {
+
+        $file_nameRaw = basename($file_path);
+        $file_name = str_replace(".xml", "", $file_nameRaw);
+        $file_name = str_replace("_TEI", "", $file_nameRaw);
+        $file_name = str_replace("_MODS", "", $file_nameRaw);
+
+        $file_name = strtolower($file_name);
+       foreach ($results as $result) {
+           $label = $result['label']['value'];
+           $label = str_replace(".tif","", $label);
+           $label = str_replace(".pdf","", $label);
+           $label = str_replace(".TIF","", $label);
+           $label = str_replace(".xml","", $label);
+           $label = str_replace("_MODS","", $label);
+           $label = str_replace("_TEI","", $label);
+           $label = strtolower($label);
+           if($file_name == $label){
+                watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_nameRaw), WATCHDOG_ERROR);
+                $object = islandora_object_load($result['obj']['value']);
+               // $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:sp_large_image_cmodel');
+                _add_datastream_to_object($object, $file_path,$digitalObject);
+           }
+           
+            
+       }
+        watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
+      }
+      else {
+        watchdog('Ingest Error', 'Child object ingest failed.', array(), WATCHDOG_ERROR);
+      }
+    }
+  }
+}
 function add_mods_to_digitalObject() {
 
    $fedora_namespace = drush_get_option('fedora_namespace');
@@ -2288,6 +2400,9 @@ function _add_datastream_to_object($object, $file_path,$digitalObject) {
   if ($digitalObject === 'MODS') {
     _add_modsxml_to_object($object, $file_path);
   }
+  if ($digitalObject === 'TEI') {
+    _add_teixml_to_object($object, $file_path);
+  }
 
   return $object;
 }
@@ -2419,6 +2534,38 @@ function _add_pdf_to_object($object, $pdf_path) {
   $datastream->mimetype = "application/pdf";
   $datastream->setContentFromFile($pdf_path);
   $object->ingestDatastream($datastream);
+}
+
+
+/**
+ * Adds a MODS xml to the supplied object as the OBJ datastream.
+ *
+ * @param FedoraObject $object
+ *   The object you wish to add the datastream to.
+ *
+ * @param string $mods_path
+ *   Valid path to a mods xml file.
+ */
+function _add_teixml_to_object($object, $tei_path) {
+    // get mods datastream from object if exist or else create a new one add this logic
+      watchdog('Ingest Success', 'In add teixml @file_name', array('@file_name' => $tei_path), WATCHDOG_ERROR);
+      $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
+      if (isset($object['TEI'])) {
+      $datastream = $object['TEI'];
+    }
+    else {
+      $datastream = $object->constructDatastream('TEI','M');
+      $datastream->label = "TEI Record";
+      $datastream->mimetype = "text/xml";
+    }
+  watchdog('Ingest Success', 'Found datastream @file_name', array('@file_name' => $tei_path), WATCHDOG_ERROR);
+  //$datastream->setContentFromFile($mods_path);
+  $tei_file = file_get_contents($tei_path);
+  $datastream->content = $tei_file;
+  $object->ingestDatastream($datastream);
+  
+  watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $tei_file), WATCHDOG_ERROR); 
+
 }
 
 
