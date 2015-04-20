@@ -2206,10 +2206,10 @@ watchdog('UCLA Migration', "begin 4 @results", array('@results' => $query), WATC
 
         $file_nameRaw = basename($file_path);
         $file_name = str_replace(".xml", "", $file_nameRaw);
-        $file_name = str_replace("_TEI", "", $file_nameRaw);
-         $file_name = str_replace("_tei", "", $file_nameRaw);
-        $file_name = str_replace("_MODS", "", $file_nameRaw);
-
+        $file_name = str_replace("_TEI", "", $file_name);
+         $file_name = str_replace("_tei", "", $file_name);
+        $file_name = str_replace("_MODS", "", $file_name);
+watchdog('Ingest Success filename', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
         $file_name = strtolower($file_name);
        foreach ($results as $result) {
            $label = $result['label']['value'];
@@ -2221,6 +2221,7 @@ watchdog('UCLA Migration', "begin 4 @results", array('@results' => $query), WATC
            $label = str_replace("_TEI","", $label);
             $label = str_replace("_tei","", $label);
            $label = strtolower($label);
+           watchdog('Ingest Success label', ' object @file_name', array('@file_name' => $label), WATCHDOG_ERROR);
            if($file_name == $label){
                 watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_nameRaw), WATCHDOG_ERROR);
                 $object = islandora_object_load($result['obj']['value']);
