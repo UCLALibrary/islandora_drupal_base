@@ -221,8 +221,8 @@ function ucla_migration_drush_command() {
         ),
         'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     );
-    $items['ucla_add_childObject'] = array(
-        'callback' => 'add_childObject',
+    $items['ucla_add_children_to_manuscript'] = array(
+        'callback' => 'add_children_to_manuscript',
         'description' => 'Ingest content given digital assets but no metadata files.',
         'options' => array(
             'fedora_namespace' => array(
@@ -2084,7 +2084,7 @@ function minimum_metadata_ingest() {
     }
 }
 
-function add_childObject() {
+function add_children_to_manuscript() {
 
     $fedora_namespace = drush_get_option('fedora_namespace');
     $manifest_file_path = drush_get_option('manifest_file_path');
@@ -2150,10 +2150,11 @@ function add_childObject() {
                 foreach ($results as $result) {
                     
                     $object = islandora_object_load($result['obj']['value']);
+                    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
                     $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
                     $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $object->id);
-                    $fedora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel', $object->id);
-                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf', 'islandora:manuscriptPageCModel');
+                    $fedora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel','islandora:manuscriptPageCModel' );
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf', $object->id);
                     $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'hasLanguage', 'no_ocr');
                     $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', '1');
                     $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', '1');
