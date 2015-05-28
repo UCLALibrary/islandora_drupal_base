@@ -2115,7 +2115,60 @@ function add_children_to_manuscript() {
     watchdog('UCLA Migration', "begin 2 @results", array('@results' => $connection), WATCHDOG_ERROR);
     $repo = $connection->repository;
     watchdog('UCLA Migration', "begin 3 @results", array('@results' => $repo), WATCHDOG_ERROR);
-    
+    foreach ($manifest_file as $file_path) {
+
+        $file_path = trim($file_path);
+
+        if (_is_valid_extension($file_path)) {
+
+            $file_path = _url_encode_http_address($file_path);
+            watchdog('Ingest started ', 'file path @file_name', array('@file_name' => $file_path), WATCHDOG_ERROR);
+            if (fopen($file_path, "r")) {
+
+                $file_name = basename($file_path);
+                $searchString = substr($file_name, 0, strlen($file_name) - 9);
+
+                watchdog('Ingest started ', 'search string @file_name', array('@file_name' => $searchString), WATCHDOG_ERROR);
+
+                // SPARQL query to parent object in a given namespace.
+                $query = "
+    SELECT ?obj ?label
+    FROM <#ri>
+    WHERE {    
+      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
+ ?obj <fedora-model:label> ?label .
+      FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:')) .
+      FILTER(regex(str(?label), '^$searchString'))
+    }
+  ";
+
+                watchdog('UCLA Migration', "begin 4 @results", array('@results' => $query), WATCHDOG_ERROR);
+                // Execute the query.
+                $results = $repo->ri->sparqlQuery($query);
+                watchdog('UCLA Migration', "begin 5 @results", array('@results' => $results), WATCHDOG_ERROR);
+
+                foreach ($results as $result) {
+                    
+                    $object = islandora_object_load($result['obj']['value']);
+                    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
+                    $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
+                    $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $object->id);
+                    $fedora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel','islandora:manuscriptPageCModel');
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf', $object->id);
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'hasLanguage', 'no_ocr');
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', '1');
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', '1');
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSection', '1');
+                    watchdog('UCLA Migration', "PID @results", array('@results' => $object->id), WATCHDOG_ERROR);
+                    _add_datastream_to_object($fedora_object, $file_path, $digitalObject);
+                    $ingest_results = islandora_add_object($fedora_object);
+                    watchdog('Ingest Success', 'Migrated object @file_name => @ingest', array('@file_name' => $file_name, '@ingest' => $ingest_results), WATCHDOG_ERROR);
+                }
+            } else {
+                watchdog('Ingest Error', 'Child object ingest failed.', array(), WATCHDOG_ERROR);
+            }
+        }
+    }
 }
 
 function delete_fedoraObject_by_nameSpace() {
