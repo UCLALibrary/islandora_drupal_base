@@ -2146,9 +2146,9 @@ function add_children_to_manuscript() {
                 // Execute the query.
                 $results = $repo->ri->sparqlQuery($query);
                 watchdog('UCLA Migration', "begin 5 @results", array('@results' => $results), WATCHDOG_ERROR);
-
+                $count = 0;
                 foreach ($results as $result) {
-                    
+                    $count++;
                     $object = islandora_object_load($result['obj']['value']);
                     $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
                     $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
@@ -2163,6 +2163,9 @@ function add_children_to_manuscript() {
                     _add_datastream_to_object($fedora_object, $file_path, $digitalObject);
                     $ingest_results = islandora_add_object($fedora_object);
                     watchdog('Ingest Success', 'Migrated object @file_name => @ingest', array('@file_name' => $file_name, '@ingest' => $ingest_results), WATCHDOG_ERROR);
+                    if($count == 1){
+                        break;
+                    }
                 }
             } else {
                 watchdog('Ingest Error', 'Child object ingest failed.', array(), WATCHDOG_ERROR);
