@@ -2127,7 +2127,7 @@ function add_children_to_manuscript() {
 
                 $file_name = basename($file_path);
                 $searchString = substr($file_name, 0, strlen($file_name) - 9);
-
+                $searchString = $searchString . "_MODS.xml";
                 watchdog('Ingest started ', 'search string @file_name', array('@file_name' => $searchString), WATCHDOG_ERROR);
 
                 // SPARQL query to parent object in a given namespace.
