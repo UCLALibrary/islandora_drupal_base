@@ -2150,7 +2150,15 @@ function add_children_to_manuscript() {
                 foreach ($results as $result) {
                     $count++;
                     $object = islandora_object_load($result['obj']['value']);
+                    $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
+                    $hasModelManuscriptCModel = FALSE;
+                    foreach ($object_content_models as $model) {
+                        watchdog('UCLA Migration', "has Model Object @results", array('@results' => $model), WATCHDOG_ERROR);
+                        var_dump($model);
+                    }
+                    if($hasModelManuscriptCModel == FALSE){
                     $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
+                    }
                     $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
                     $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $object->id);
                     $fedora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel','islandora:manuscriptPageCModel');
