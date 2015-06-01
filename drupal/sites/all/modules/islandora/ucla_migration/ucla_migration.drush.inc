@@ -221,6 +221,24 @@ function ucla_migration_drush_command() {
         ),
         'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     );
+     $items['ucla_fix_page_sequence_number'] = array(
+        'callback' => 'fix_page_sequence_number',
+        'description' => 'Ingest content given digital assets but no metadata files.',
+        'options' => array(
+            'fedora_namespace' => array(
+                'description' => 'The Fedora namespace to update the datastreams under.',
+                'required' => 'true'
+            ),
+            'manifest_file_path' => array(
+                'description' => 'The path to the file containing a list of assets to ingest.',
+                'required' => 'true'
+            ),
+        ),
+        'examples' => array(
+            'simple example' => 'drush -u 1 -l http://example.com ucla_fix_page_sequence_number fedoranamespace /path/to/manifest/file.txt',
+        ),
+        'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    );
     $items['ucla_add_children_to_manuscript'] = array(
         'callback' => 'add_children_to_manuscript',
         'description' => 'Ingest content given digital assets but no metadata files.',
@@ -2126,8 +2144,9 @@ function add_children_to_manuscript() {
             if (fopen($file_path, "r")) {
 
                 $file_name = basename($file_path);
+                $nameArray = explode("_", $file_name);    
                 $searchString = substr($file_name, 0, strlen($file_name) - 9);
-                $searchString = $searchString . "_MODS.xml";
+                $searchString = $nameArray[0] .$nameArray[1]. "_MODS.xml";
                 watchdog('Ingest started ', 'search string @file_name', array('@file_name' => $searchString), WATCHDOG_ERROR);
 
                 // SPARQL query to parent object in a given namespace.
@@ -2163,13 +2182,14 @@ function add_children_to_manuscript() {
                     if($hasModelManuscriptCModel == FALSE){
                     $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
                     }
+                    $pages = islandora_paged_content_get_pages($object);
+                    $num_pages = count($pages) + 1;
                     $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
                     $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $object->id);
                     $fedora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel','islandora:manuscriptPageCModel');
-                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf', $object->id);
-                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'hasLanguage', 'no_ocr');
-                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', '1');
-                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', '1');
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf', $object->id);                    
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', (string) $num_pages);
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', (string) $num_pages);
                     $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSection', '1');
                     watchdog('UCLA Migration', "PID @results", array('@results' => $object->id), WATCHDOG_ERROR);
                     _add_datastream_to_object($fedora_object, $file_path, $digitalObject);
@@ -2183,6 +2203,76 @@ function add_children_to_manuscript() {
                 watchdog('Ingest Error', 'Child object ingest failed.', array(), WATCHDOG_ERROR);
             }
         }
+    }
+}
+
+function fix_page_sequence_number(){
+    $fedora_namespace = drush_get_option('fedora_namespace');
+    $manifest_file_path = drush_get_option('manifest_file_path');
+    
+
+
+    $manifest_file = file($manifest_file_path);
+    if (!$manifest_file) {
+        drush_set_error('File not found', "Could not locate manifest file file $manifest_file_path", "Error: ");
+        return;
+    }
+
+    if (!isset($fedora_namespace)) {
+        drush_set_error('Fedora namespace not provided', 'A Fedora namespace to associate with the ingest must be provided', 'Error: ');
+        return;
+    }
+
+
+   
+
+
+    // $collection = islandora_object_load($fedora_namespace . ':1');
+    watchdog('UCLA Migration', "begin 1 @results", array('@results' => $fedora_namespace), WATCHDOG_ERROR);
+    $connection = islandora_get_tuque_connection();
+    watchdog('UCLA Migration', "begin 2 @results", array('@results' => $connection), WATCHDOG_ERROR);
+    $repo = $connection->repository;
+    watchdog('UCLA Migration', "begin 3 @results", array('@results' => $repo), WATCHDOG_ERROR);
+    foreach ($manifest_file as $file_path) {
+
+        $file_path = trim($file_path);
+         if (_is_valid_extension($file_path)) {
+
+            $file_path = _url_encode_http_address($file_path);
+            watchdog('Ingest started ', 'file path @file_name', array('@file_name' => $file_path), WATCHDOG_ERROR);
+            if (fopen($file_path, "r")) {
+
+                $file_name = basename($file_path);
+                $nameArray = explode("_", $file_name);               
+                $sequenceString = str_replace('.tif', '', $nameArray[2]);
+                $sequence = intval($sequenceString);
+                watchdog('Ingest started ', 'search string @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
+
+                // SPARQL query to parent object in a given namespace.
+                $query = "
+    SELECT ?obj ?label
+    FROM <#ri>
+    WHERE {    
+      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
+ ?obj <fedora-model:label> ?label .
+      FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:')) .
+      FILTER(regex(str(?label), '^$file_name'))
+    }
+  ";
+
+                watchdog('UCLA Migration', "begin 4 @results", array('@results' => $query), WATCHDOG_ERROR);
+                // Execute the query.
+                $results = $repo->ri->sparqlQuery($query);
+                watchdog('UCLA Migration', "begin 5 @results", array('@results' => $results), WATCHDOG_ERROR);
+                foreach ($results as $result) {
+                 $object = islandora_object_load($result['obj']['value']);
+                 $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber');
+                 $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'isPageNumber');
+                 $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', (string) $sequence);
+                 $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', (string) $sequence);
+                }
+            }
+         }
     }
 }
 
