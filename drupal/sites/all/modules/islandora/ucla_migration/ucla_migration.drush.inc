@@ -2151,11 +2151,14 @@ function add_children_to_manuscript() {
                     $count++;
                     $object = islandora_object_load($result['obj']['value']);
                     $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
-                    var_dump($object_content_models);
+                   
                     $hasModelManuscriptCModel = FALSE;
                     foreach ($object_content_models as $model) {
-                        watchdog('UCLA Migration', "has Model Object @results", array('@results' => $model), WATCHDOG_ERROR);
-                        var_dump($model);
+                        watchdog('UCLA Migration', "has Model Object @results", array('@results' => $model), WATCHDOG_ERROR);                       
+                        if($model['object']['value'] == 'islandora:manuscriptCModel'){
+                            $hasModelManuscriptCModel = TRUE;
+                            break;
+                        }
                     }
                     if($hasModelManuscriptCModel == FALSE){
                     $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
