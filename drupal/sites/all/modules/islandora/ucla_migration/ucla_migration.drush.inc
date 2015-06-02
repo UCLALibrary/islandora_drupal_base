@@ -2182,7 +2182,7 @@ function add_children_to_manuscript() {
                     if($hasModelManuscriptCModel == FALSE){
                     $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
                     }
-                    $pages = islandora_paged_content_get_pages($object);
+                    $pages = get_pages($object);
                     $num_pages = count($pages) + 1;
                     $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
                     $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $object->id);
@@ -2205,7 +2205,7 @@ function add_children_to_manuscript() {
         }
     }
 }
-function islandora_paged_content_get_pages(AbstractObject $object) {
+function get_pages(AbstractObject $object) {
   $query = <<<EOQ
 PREFIX islandora-rels-ext: <http://islandora.ca/ontology/relsext#>
 SELECT ?pid ?page ?label ?width ?height
