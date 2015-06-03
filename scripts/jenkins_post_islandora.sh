@@ -47,4 +47,5 @@ do
     exit $?
   fi
   drush -y --root=${DRUPAL_HOME} -l ${SITE} cron
+  drush -y --root=${DRUPAL_HOME} -l ${SITE} vset --exact islandora_saxon_enable_saxon TRUE
 done
