@@ -2146,7 +2146,9 @@ function add_children_to_manuscript() {
                 $file_name = basename($file_path);
                 $nameArray = explode("_", $file_name);    
                 $searchString = substr($file_name, 0, strlen($file_name) - 9);
-                $searchString = $nameArray[0].'_' .$nameArray[1]. "_MODS.xml";
+                $searchString = $nameArray[0].'_' .$nameArray[1]. "_MODS.xml";                            
+                $sequenceString = str_replace('.tif', '', $nameArray[2]);
+                $sequence = intval($sequenceString);
                 watchdog('Ingest started ', 'search string @file_name', array('@file_name' => $searchString), WATCHDOG_ERROR);
 
                 // SPARQL query to parent object in a given namespace.
@@ -2182,14 +2184,14 @@ function add_children_to_manuscript() {
                     if($hasModelManuscriptCModel == FALSE){
                     $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
                     }
-                    $pages = get_pages($object);
-                    $num_pages = count($pages) + 1;
+                   // $pages = get_pages($object);
+                    //$num_pages = count($pages) + 1;
                     $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
                     $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $object->id);
                     $fedora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel','islandora:manuscriptPageCModel');
                     $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf', $object->id);                    
-                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', (string) $num_pages);
-                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', (string) $num_pages);
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', (string) $sequence);
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', (string) $sequence);
                     $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSection', '1');
                     watchdog('UCLA Migration', "PID @results", array('@results' => $object->id), WATCHDOG_ERROR);
                     _add_datastream_to_object($fedora_object, $file_path, $digitalObject);
