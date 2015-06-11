@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * @file
+ * The main Saxon module file. Contains most of the hook implementations.
+ *
+ * @todo Add uninstall hook to delete our the variables we set.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function islandora_saxon_menu() {
+  $items = array();
+
+  $items['admin/islandora/tools/saxon'] = array(
+    'title' => 'Saxon XSLT Processor',
+    'description' => "Configure Islandora's use of Saxon.",
+    'page callback' => 'drupal_get_form',
+    'access arguments' => array('administer site configuration'),
+    'page arguments' => array('islandora_saxon_admin_form'),
+    'file' => 'includes/admin.form.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}

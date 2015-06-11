@@ -1,0 +1,7 @@
+name = Islandora Saxon
+description = "Allows use of Saxon and XSLT 2.0."
+package = Islandora Tools
+version = 7.x-dev
+core = 7.x
+configure = admin/islandora/tools/saxon
+dependencies[] = islandora

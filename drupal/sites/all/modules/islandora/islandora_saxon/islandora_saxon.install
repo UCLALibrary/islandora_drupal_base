@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * @file
+ * This file contains all install related hooks.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function islandora_saxon_uninstall() {
+  delete_variables();
+}
+
+function islandora_saxon_disable() {
+  delete_variables();
+}
+
+function delete_variables() {
+  $variables = array(
+    'islandora_saxon_engine_type',
+    'islandora_saxon_enable_saxon',
+  );
+
+  array_walk($variables, 'variable_del');	
+}
