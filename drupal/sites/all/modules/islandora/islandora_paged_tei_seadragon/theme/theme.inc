@@ -33,10 +33,13 @@ function template_preprocess_islandora_paged_tei_seadragon_viewer(array &$variab
   }
 
   drupal_add_css("$viewer_module_path/css/viewer.css");
-  // Only want to display TEI in the event that a associated transform is
-  // present.
+  // Only want to display TEI in the event that a associated transform is present.
   if ($transform) {
-    $tei = islandora_paged_tei_seadragon_do_transform($manuscript, $transform);
+    $generate = (isset($_GET['generate']) ? $_GET['generate'] : NULL);
+    $page_num = (isset($_GET['islandora_paged_content_page']) ? $_GET['islandora_paged_content_page'] : 1);
+
+    // This is the TEI that was loaded on page load (independent of JavaScript updates)
+    $tei = islandora_paged_tei_seadragon_do_transform($manuscript, $transform, $page_num, $generate);
   }
   if ($page_pid) {
     $token = islandora_get_object_token($page_pid, 'JP2', 2);
@@ -85,10 +88,24 @@ function template_preprocess_islandora_paged_tei_seadragon_viewer(array &$variab
       'setting'
     );
     if ($tei) {
+      $tei_html_name = str_replace(':', '_', $manuscript->id);
+
+      // If we're using TEI HTML fragments, we'll be reading them from the filesystem
+      if ($files_dir = file_stream_wrapper_get_instance_by_uri('public://')) {
+        $tei_html_dir = '/teihtml/' . $tei_html_name;
+        $tei_html_path = '/' . $files_dir->getDirectoryPath() . $tei_html_dir;
+
+        if (variable_get('islandora_saxon_enable_saxon') != TRUE) {
+          $tei_html_path = "empty";
+        }
+      }
+
       drupal_add_js(
         array(
           'islandora_paged_tei_tei' => array(
             'populated_tei' => $tei,
+            'tei_html_name' => $tei_html_name,
+            'tei_html_path' => $tei_html_path,
           ),
         ),
         'setting'

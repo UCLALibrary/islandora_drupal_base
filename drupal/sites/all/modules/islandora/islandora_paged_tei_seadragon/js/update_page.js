@@ -3,10 +3,11 @@
         attach: function (context, settings) {
             // TEI pane's height can't be set via CSS.
             $("#paged-tei-seadragon-viewer-tei").height($(".openseadragon-canvas").height());
-            // If there's no TEI populated want the viewer to take up the
-            // whole page.
+            // If there's no TEI populated want the viewer to take up the whole page.
             var tei_defined = Drupal.settings.islandora_paged_tei_tei !== undefined && Drupal.settings.islandora_paged_tei_tei.populated_tei !== undefined;
             var tei_populated = tei_defined && Drupal.settings.islandora_paged_tei_tei.populated_tei;
+            var tei_html_name = tei_defined && Drupal.settings.islandora_paged_tei_tei.tei_html_name;
+            var tei_html_path = tei_defined && Drupal.settings.islandora_paged_tei_tei.tei_html_path;
             if (!tei_populated) {
                 $("#paged-tei-seadragon-viewer-seadragon-pane").width("100%");
             }
@@ -104,6 +105,10 @@
                             });
                         }
 
+                        if (tei_defined && tei_html_path != "empty") {
+                          $("#paged-tei-seadragon-viewer-tei").empty();
+                          $("#paged-tei-seadragon-viewer-tei").load(tei_html_path + "/" + tei_html_name + "-" + page_number + ".html");
+                        }
                     }
                 })
             };
