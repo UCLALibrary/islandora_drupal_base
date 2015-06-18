@@ -34,6 +34,18 @@ function ucla_migration_drush_command() {
         ),
         'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     );
+     $items['ucla_fix_fedoraObject_relsExt_by_nameSpace'] = array(
+        'callback' => 'fix_fedoraObject_relsExt_by_nameSpace',
+        'description' => 'fix all the objects in a given namespace',
+        'arguments' => array(
+            'fedora_namespace' => "The Fedora namespace whose PIDS you're looking for.",
+        ),
+        'options' => array(),
+        'examples' => array(
+            'simple example' => 'drush -u 1 -l http://example.com fix_fedoraObject_relsExt_by_nameSpace your_namespace',
+        ),
+        'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    );
     $items['ucla_update_Label_from_DC_for_namespace'] = array(
         'callback' => 'update_Label_from_DC_for_namespace',
         'description' => 'convert dc from mods, if add_mods flag is set to true , ingest the MODS datastream along with DC datastream',
