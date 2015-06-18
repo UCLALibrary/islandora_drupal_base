@@ -11,19 +11,27 @@ define('ISLANDORA_MANUSCRIPT_CONTAINER_TAG_URI', 'http://islandora.ca/manuscript
  * Implements hook_preprocess_theme().
  */
 function islandora_manuscript_preprocess_islandora_manuscript_manuscript(array &$variables) {
+  drupal_add_js('misc/form.js');
+  drupal_add_js('misc/collapse.js');
+  module_load_include('inc', 'islandora', 'includes/datastream');
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  module_load_include('inc', 'islandora', 'includes/metadata');
   module_load_include('inc', 'islandora_paged_content', 'includes/utilities');
   module_load_include('inc', 'islandora_manuscript', 'includes/utilities');
-  $object = $variables['object'];
+  
+  $islandora_object = $variables['object'];
   $params = array(
-    'object' => $object,
-    'pages' => islandora_paged_content_get_pages($object),
-    'page_progression' => islandora_paged_content_get_page_progression($object),
-    'transform_object' => islandora_manuscript_get_manuscript_transform_object($object),
+    'object' => $islandora_object,
+    'pages' => islandora_paged_content_get_pages($islandora_object),
+    'page_progression' => islandora_paged_content_get_page_progression($islandora_object),
+    'transform_object' => islandora_manuscript_get_manuscript_transform_object($islandora_object),
   );
   module_load_include('inc', 'islandora', 'includes/solution_packs');
+  
   $viewer = islandora_get_viewer($params, 'islandora_manuscript_viewers');
   if ($viewer) {
     $variables['viewer'] = $viewer;
+    $variables['metadata'] = islandora_retrieve_metadata_markup($islandora_object);
   }
 }
 

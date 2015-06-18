@@ -9,4 +9,4 @@
     <?php print $viewer; ?>
   </div>
 <?php endif; ?>
-<!-- @todo Add table of metadata values -->
+<?php print $metadata; ?>
