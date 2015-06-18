@@ -34,7 +34,7 @@ function ucla_migration_drush_command() {
         ),
         'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     );
-     $items['ucla_fix_fedoraObject_relsExt_by_pids'] = array(
+    $items['ucla_fix_fedoraObject_relsExt_by_pids'] = array(
         'callback' => 'fix_fedoraObject_relsExt_by_pids',
         'description' => 'fix all the objects in a given pids',
         'arguments' => array(
@@ -233,7 +233,7 @@ function ucla_migration_drush_command() {
         ),
         'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     );
-     $items['ucla_fix_page_sequence_number'] = array(
+    $items['ucla_fix_page_sequence_number'] = array(
         'callback' => 'fix_page_sequence_number',
         'description' => 'Ingest content given digital assets but no metadata files.',
         'options' => array(
@@ -342,16 +342,14 @@ function ucla_migration_drush_command() {
     return $items;
 }
 
-
-
 function fix_fedoraObject_relsExt_by_pids() {
     $pids = drush_get_option('pids');
     if (!isset($pids)) {
         drush_set_error('Pids not provided', 'A pids to associate with the ingest must be provided', 'Error: ');
         return;
     }
-    
- 
+
+
 
     $pids_file = file($pids);
     if (!$pids_file) {
@@ -359,29 +357,28 @@ function fix_fedoraObject_relsExt_by_pids() {
         return;
     }
 
-            
-            foreach ($pids_file as $pid) {
+
+    foreach ($pids_file as $pid) {
 
 
         $pid = trim($pid);
         $object = islandora_object_load($pid);
-           
-                    $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
-                   
-                    $hasModelManuscriptCModel = FALSE;
-                    foreach ($object_content_models as $model) {
-                        watchdog('UCLA Migration', "has Model Object @results", array('@results' => $model), WATCHDOG_ERROR);                       
-                        if($model['object']['value'] == 'islandora:manuscriptCModel'){
-                            $hasModelManuscriptCModel = TRUE;
-                            break;
-                        }
-                    }
-                    if($hasModelManuscriptCModel == FALSE){
-                    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
-                    }
+        if (isset($object)) {
+            $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
+
+            $hasModelManuscriptCModel = FALSE;
+            foreach ($object_content_models as $model) {
+                watchdog('UCLA Migration', "has Model Object @results", array('@results' => $model), WATCHDOG_ERROR);
+                if ($model['object']['value'] == 'islandora:manuscriptCModel') {
+                    $hasModelManuscriptCModel = TRUE;
+                    break;
+                }
+            }
+            if ($hasModelManuscriptCModel == FALSE) {
+                $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
+            }
         }
-    
-    
+    }
 }
 
 /**
@@ -2198,9 +2195,9 @@ function add_children_to_manuscript() {
             if (fopen($file_path, "r")) {
 
                 $file_name = basename($file_path);
-                $nameArray = explode("_", $file_name);    
+                $nameArray = explode("_", $file_name);
                 $searchString = substr($file_name, 0, strlen($file_name) - 9);
-                $searchString = $nameArray[0].'_' .$nameArray[1]. "_MODS.xml";                            
+                $searchString = $nameArray[0] . '_' . $nameArray[1] . "_MODS.xml";
                 $sequenceString = str_replace('.tif', '', $nameArray[2]);
                 $sequence = intval($sequenceString);
                 watchdog('Ingest started ', 'search string @file_name', array('@file_name' => $searchString), WATCHDOG_ERROR);
@@ -2226,24 +2223,24 @@ function add_children_to_manuscript() {
                     $count++;
                     $object = islandora_object_load($result['obj']['value']);
                     $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
-                   
+
                     $hasModelManuscriptCModel = FALSE;
                     foreach ($object_content_models as $model) {
-                        watchdog('UCLA Migration', "has Model Object @results", array('@results' => $model), WATCHDOG_ERROR);                       
-                        if($model['object']['value'] == 'islandora:manuscriptCModel'){
+                        watchdog('UCLA Migration', "has Model Object @results", array('@results' => $model), WATCHDOG_ERROR);
+                        if ($model['object']['value'] == 'islandora:manuscriptCModel') {
                             $hasModelManuscriptCModel = TRUE;
                             break;
                         }
                     }
-                    if($hasModelManuscriptCModel == FALSE){
-                    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
+                    if ($hasModelManuscriptCModel == FALSE) {
+                        $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
                     }
-                   // $pages = get_pages($object);
+                    // $pages = get_pages($object);
                     //$num_pages = count($pages) + 1;
                     $fedora_object = ucla_migration_create_fedora_object($fedora_namespace, $file_name);
                     $fedora_object->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOf', $object->id);
-                    $fedora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel','islandora:manuscriptPageCModel');
-                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf', $object->id);                    
+                    $fedora_object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptPageCModel');
+                    $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageOf', $object->id);
                     $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', (string) $sequence);
                     $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', (string) $sequence);
                     $fedora_object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSection', '1');
@@ -2251,7 +2248,7 @@ function add_children_to_manuscript() {
                     _add_datastream_to_object($fedora_object, $file_path, $digitalObject);
                     $ingest_results = islandora_add_object($fedora_object);
                     watchdog('Ingest Success', 'Migrated object @file_name => @ingest', array('@file_name' => $file_name, '@ingest' => $ingest_results), WATCHDOG_ERROR);
-                    if($count == 1){
+                    if ($count == 1) {
                         break;
                     }
                 }
@@ -2261,8 +2258,9 @@ function add_children_to_manuscript() {
         }
     }
 }
+
 function get_pages(AbstractObject $object) {
-  $query = <<<EOQ
+    $query = <<<EOQ
 PREFIX islandora-rels-ext: <http://islandora.ca/ontology/relsext#>
 SELECT ?pid ?page ?label ?width ?height
 FROM <#ri>
@@ -2281,47 +2279,48 @@ WHERE {
 ORDER BY ?page
 EOQ;
 
-  $results = $object->repository->ri->sparqlQuery($query);
+    $results = $object->repository->ri->sparqlQuery($query);
 
-  // Get rid of the "extra" info...
-  $map = function($o) {
-    foreach ($o as $key => &$info) {
-      $info = $info['value'];
-    }
+    // Get rid of the "extra" info...
+    $map = function($o) {
+        foreach ($o as $key => &$info) {
+            $info = $info['value'];
+        }
 
-    $o = array_filter($o);
+        $o = array_filter($o);
 
-    return $o;
-  };
-  $pages = array_map($map, $results);
+        return $o;
+    };
+    $pages = array_map($map, $results);
 
-  // Grab the PIDs...
-  $get_pid = function($o) {
-    return $o['pid'];
-  };
-  $pids = array_map($get_pid, $pages);
+    // Grab the PIDs...
+    $get_pid = function($o) {
+        return $o['pid'];
+    };
+    $pids = array_map($get_pid, $pages);
 
-  // If we have some pages, combine our remapped results to produce an array
-  // mapping pids to the values for that pid.
-  $pages = count($pids) ? array_combine($pids, $pages) : array();
+    // If we have some pages, combine our remapped results to produce an array
+    // mapping pids to the values for that pid.
+    $pages = count($pids) ? array_combine($pids, $pages) : array();
 
-  // Sort the pages into their proper order.
-  $sort = function($a, $b) {
-    $a = (is_array($a) && isset($a['page'])) ? $a['page'] : 0;
-    $b = (is_array($b) && isset($b['page'])) ? $b['page'] : 0;
-    if ($a == $b) {
-      return 0;
-    }
-    return ($a < $b) ? -1 : 1;
-  };
-  uasort($pages, $sort);
+    // Sort the pages into their proper order.
+    $sort = function($a, $b) {
+        $a = (is_array($a) && isset($a['page'])) ? $a['page'] : 0;
+        $b = (is_array($b) && isset($b['page'])) ? $b['page'] : 0;
+        if ($a == $b) {
+            return 0;
+        }
+        return ($a < $b) ? -1 : 1;
+    };
+    uasort($pages, $sort);
 
-  return $pages;
+    return $pages;
 }
-function fix_page_sequence_number(){
+
+function fix_page_sequence_number() {
     $fedora_namespace = drush_get_option('fedora_namespace');
     $manifest_file_path = drush_get_option('manifest_file_path');
-    
+
 
 
     $manifest_file = file($manifest_file_path);
@@ -2336,7 +2335,7 @@ function fix_page_sequence_number(){
     }
 
 
-   
+
 
 
     // $collection = islandora_object_load($fedora_namespace . ':1');
@@ -2348,14 +2347,14 @@ function fix_page_sequence_number(){
     foreach ($manifest_file as $file_path) {
 
         $file_path = trim($file_path);
-         if (_is_valid_extension($file_path)) {
+        if (_is_valid_extension($file_path)) {
 
             $file_path = _url_encode_http_address($file_path);
             watchdog('Ingest started ', 'file path @file_name', array('@file_name' => $file_path), WATCHDOG_ERROR);
             if (fopen($file_path, "r")) {
 
                 $file_name = basename($file_path);
-                $nameArray = explode("_", $file_name);               
+                $nameArray = explode("_", $file_name);
                 $sequenceString = str_replace('.tif', '', $nameArray[2]);
                 $sequence = intval($sequenceString);
                 watchdog('Ingest started ', 'search string @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
@@ -2377,14 +2376,14 @@ function fix_page_sequence_number(){
                 $results = $repo->ri->sparqlQuery($query);
                 watchdog('UCLA Migration', "begin 5 @results", array('@results' => $results), WATCHDOG_ERROR);
                 foreach ($results as $result) {
-                 $object = islandora_object_load($result['obj']['value']);
-                 $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber');
-                 $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'isPageNumber');
-                 $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', (string) $sequence);
-                 $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', (string) $sequence);
+                    $object = islandora_object_load($result['obj']['value']);
+                    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber');
+                    $object->relationships->remove(ISLANDORA_RELS_EXT_URI, 'isPageNumber');
+                    $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', (string) $sequence);
+                    $object->relationships->add(ISLANDORA_RELS_EXT_URI, 'isPageNumber', (string) $sequence);
                 }
             }
-         }
+        }
     }
 }
 
@@ -2423,8 +2422,6 @@ function delete_fedoraObject_by_nameSpace() {
     }
     _purge_object_by_pid($pids);
 }
-
-
 
 function add_dataStream_to_digitalObject() {
 
