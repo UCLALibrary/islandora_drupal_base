@@ -34,15 +34,15 @@ function ucla_migration_drush_command() {
         ),
         'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     );
-     $items['ucla_fix_fedoraObject_relsExt_by_nameSpace'] = array(
-        'callback' => 'fix_fedoraObject_relsExt_by_nameSpace',
-        'description' => 'fix all the objects in a given namespace',
+     $items['ucla_fix_fedoraObject_relsExt_by_pids'] = array(
+        'callback' => 'fix_fedoraObject_relsExt_by_pids',
+        'description' => 'fix all the objects in a given pids',
         'arguments' => array(
-            'fedora_namespace' => "The Fedora namespace whose PIDS you're looking for.",
+            'pids' => "The PIDS you're looking for.",
         ),
         'options' => array(),
         'examples' => array(
-            'simple example' => 'drush -u 1 -l http://example.com fix_fedoraObject_relsExt_by_nameSpace your_namespace',
+            'simple example' => 'drush -u 1 -l http://example.com fix_fedoraObject_relsExt_by_nameSpace pids',
         ),
         'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     );
@@ -344,37 +344,28 @@ function ucla_migration_drush_command() {
 
 
 
-function fix_fedoraObject_relsExt_by_nameSpace() {
-    $fedora_namespace = drush_get_option('fedora_namespace');
-    if (!isset($fedora_namespace)) {
-        drush_set_error('Fedora namespace not provided', 'A Fedora namespace to associate with the ingest must be provided', 'Error: ');
+function fix_fedoraObject_relsExt_by_pids() {
+    $pids = drush_get_option('pids');
+    if (!isset($pids)) {
+        drush_set_error('Pids not provided', 'A pids to associate with the ingest must be provided', 'Error: ');
         return;
     }
-    // Get a connection to Fedora.
-    $connection = islandora_get_tuque_connection();
-    watchdog('Fix step 1 connection object', ' @file_name', array('@file_name' => $connection), WATCHDOG_ERROR);
-    $repo = $connection->repository;
-    watchdog('Fix step 2 connection object', ' @file_name', array('@file_name' => $repo), WATCHDOG_ERROR);
+    
+ 
 
-    // SPARQL query to get all objects in a given namespace.
-    $query = "
-    SELECT ?obj
-    FROM <#ri>
-    WHERE {
-      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
-      FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:'))
+    $pids_file = file($pids);
+    if (!$pids_file) {
+        drush_set_error('File not found', "Could not locate manifest file file $pids", "Error: ");
+        return;
     }
-  ";
-    watchdog('Fix step 3 connection object', ' @file_name', array('@file_name' => $query), WATCHDOG_ERROR);
-    // Execute the query.
-    $results = $repo->ri->sparqlQuery($query);
 
-    watchdog('Fix step 4 connection object', ' @file_name', array('@file_name' => var_dump($results)), WATCHDOG_ERROR);
-    $pids = array();
-    foreach ($results as $result) {
-        watchdog('Fix step 4 in foreach', ' @file_name', array('@file_name' => var_dump($result)), WATCHDOG_ERROR);
-        if ($result['obj']['value'] !== $fedora_namespace . ':1') {
-            $object = islandora_object_load($result['obj']['value']);
+            
+            foreach ($pids_file as $pid) {
+
+
+        $pid = trim($pid);
+        $object = islandora_object_load($pid);
+           
                     $object_content_models = $object->relationships->get('info:fedora/fedora-system:def/model#', 'hasModel');
                    
                     $hasModelManuscriptCModel = FALSE;
@@ -389,7 +380,7 @@ function fix_fedoraObject_relsExt_by_nameSpace() {
                     $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:manuscriptCModel');
                     }
         }
-    }
+    
     
 }
 
