@@ -109,7 +109,23 @@
 
                         if (tei_defined && tei_html_path != "empty") {
                           $("#paged-tei-seadragon-viewer-tei").empty();
-                          $("#paged-tei-seadragon-viewer-tei").load(tei_html_path + "/" + tei_html_name + "-" + page_number + ".html");
+                          $("#paged-tei-seadragon-viewer-tei").load(tei_html_path + "/" + tei_html_name + "-" + page_number + ".html",
+                            /* There is overlap here with what's in theme.inc [FIXME?] */
+                            function() {
+                              $("button#toggle").removeClass("tei-hidden");
+
+                              $("button#toggle").click(function() {
+                                $(".tei-diplomatic").toggleClass("tei-hidden");
+                                $(".tei-edited").toggleClass("tei-hidden");
+
+                                if ($(".tei-edited").hasClass("tei-hidden")) {
+                                  $("button#toggle").text("Show Edited Text");
+                                } else {
+                                  $("button#toggle").text("Show Unedited Text");
+                                }
+                              });
+                            }
+                          );
                         }
                     }
                 })
