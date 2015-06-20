@@ -137,6 +137,11 @@ function template_preprocess_islandora_paged_tei_seadragon_viewer(array &$variab
     drupal_add_js("$viewer_module_path/js/update_page.js");
 
     drupal_add_js("$viewer_module_path/js/tei_toggle.js");
+    // Start TEI viewer closed by default
+    drupal_add_js('jQuery(document).ready(function () {
+      jQuery("#paged-tei-seadragon-viewer-tei").toggle();
+      jQuery("#paged-tei-seadragon-viewer-seadragon-pane").width("98%");
+    });', 'inline');
     $variables['button_label'] = t('Transcription');
     $variables['page_pid'] = $page_pid;
   }
