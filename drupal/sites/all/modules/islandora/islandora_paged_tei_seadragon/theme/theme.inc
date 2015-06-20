@@ -148,7 +148,7 @@ function template_preprocess_islandora_paged_tei_seadragon_viewer(array &$variab
       // Then we need to be able to toggle it when clicked
       jQuery("button#toggle").click(function() {
         jQuery(".tei-diplomatic").toggleClass("tei-hidden");
-        jQuery(".tei-edited").toggleClass("tei-hidden")
+        jQuery(".tei-edited").toggleClass("tei-hidden");
 
         if (jQuery(".tei-edited").hasClass("tei-hidden")) {
           jQuery("button#toggle").text("Show Edited Text");
