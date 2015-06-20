@@ -204,7 +204,7 @@ or
           </head>
           <body>
             <div id="{@facs}" class="tei-transcription">
-              <button id="toggle" title="toggle" type="button" class="hidden">Toggle Edited</button>
+              <button id="toggle" title="toggle" type="button" class="tei-hidden">Toggle Edited</button>
             <xsl:apply-templates mode="transcription"/>
             </div>
           </body>
@@ -218,7 +218,7 @@ or
            </xsl:text>
         <xsl:comment>This HTML Fragment has been generated from an XML original. Do not manually modify this as a source.</xsl:comment>
           <div id="{@facs}" class="tei-transcription">
-            <button id="toggle" title="toggle" type="button" class="hidden">Toggle Edited</button>
+            <button id="toggle" title="toggle" type="button" class="tei-hidden">Toggle Edited</button>
             <xsl:apply-templates mode="transcription"/>
           </div>
         </xsl:result-document>
