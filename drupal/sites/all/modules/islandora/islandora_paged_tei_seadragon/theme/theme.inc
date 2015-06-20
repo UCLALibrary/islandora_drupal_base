@@ -136,11 +136,28 @@ function template_preprocess_islandora_paged_tei_seadragon_viewer(array &$variab
     drupal_add_js("$viewer_module_path/js/update_page.js");
 
     drupal_add_js("$viewer_module_path/js/tei_toggle.js");
-    // Start TEI viewer closed by default
+
     drupal_add_js('jQuery(document).ready(function () {
+      // Start with the TEI transcription hidden
       jQuery("#paged-tei-seadragon-viewer-tei").toggle();
       jQuery("#paged-tei-seadragon-viewer-seadragon-pane").width("98%");
+
+      // Turn on the TEI edited-text toggle button
+      jQuery("button#toggle").removeClass("tei-hidden");
+
+      // Then we need to be able to toggle it when clicked
+      jQuery("button#toggle").click(function() {
+        jQuery(".tei-diplomatic").toggleClass("tei-hidden");
+        jQuery(".tei-edited").toggleClass("tei-hidden")
+
+        if (jQuery(".tei-edited").hasClass("tei-hidden")) {
+          jQuery("button#toggle").text("Show Edited Text");
+        } else {
+          jQuery("button#toggle").text("Show Unedited Text");
+        }
+      });
     });', 'inline');
+
     $variables['button_label'] = t('Transcription');
     $variables['page_pid'] = $page_pid;
   }
