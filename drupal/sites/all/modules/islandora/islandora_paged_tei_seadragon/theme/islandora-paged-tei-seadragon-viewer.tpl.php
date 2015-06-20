@@ -32,9 +32,9 @@
       <?php print isset($seadragon) ? $seadragon : '';?>
     </div>
   </div>
-  <div class="paged-tei-seadragon-viewer-download-datastreams">
-    <?php print isset($datastreams) ? $datastreams : '';?>
-  </div>
+<!--<div class="paged-tei-seadragon-viewer-download-datastreams">
+    <?php //print isset($datastreams) ? $datastreams : '';?>
+  </div>-->
 <?php else: ?>
   <p><?php print t('This manuscript currently does not contain any page image(s) or text.'); ?></p>
 <?php endif; ?>
