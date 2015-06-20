@@ -10,7 +10,7 @@
   width: 49%;
 }
 #paged-tei-seadragon-viewer-tei-pane {
-  max-width: 49%;
+  width: 49%;
 }
 #paged-tei-seadragon-viewer-tei-pane-full {
     max-width: 100%;
@@ -28,7 +28,6 @@
   float: right;
 }
 .paged-tei-seadragon-viewer-download-datastreams {
-  float: right;
 }
 
 /* Styles related to the TEI page-turning */
