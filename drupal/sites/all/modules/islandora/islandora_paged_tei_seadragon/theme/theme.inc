@@ -137,7 +137,7 @@ function template_preprocess_islandora_paged_tei_seadragon_viewer(array &$variab
     drupal_add_js("$viewer_module_path/js/update_page.js");
 
     drupal_add_js("$viewer_module_path/js/tei_toggle.js");
-    $variables['button_label'] = t('Toggle TEI');
+    $variables['button_label'] = t('Transcription');
     $variables['page_pid'] = $page_pid;
   }
 
