@@ -59,34 +59,36 @@ function template_preprocess_islandora_paged_tei_seadragon_viewer(array &$variab
       '@total' => count($variables['pages']),
     ));
 
-    $dsids_to_render = array('PDF', 'JP2', 'TIFF');
-    $download_prefix = t('<strong>Download: </strong>');
-    $page = islandora_object_load($page_pid);
-    $datastreams = array();
-    foreach ($dsids_to_render as $key => $dsid) {
-      if (isset($page[$dsid]) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $page[$dsid])) {
-        $size = islandora_datastream_get_human_readable_size($page[$dsid]);
-        $link = l(t("@dsid (@size)", array('@dsid' => $dsid, '@size' => $size)), islandora_datastream_get_url($page[$dsid], 'download'));
-        $datastreams[$dsid] = array(
-          '#markup' => "$download_prefix$link",
-          '#prefix' => '<div id="paged-tei-seadragon-viewer-download-datastream-' . $dsid . '">',
-          '#suffix' => '</div>',
-        );
+    if($display_download_links) {
+      $dsids_to_render = array('PDF', 'JP2', 'TIFF');
+      $download_prefix = t('<strong>Download: </strong>');
+      $page = islandora_object_load($page_pid);
+      $datastreams = array();
+      foreach ($dsids_to_render as $key => $dsid) {
+        if (isset($page[$dsid]) && islandora_datastream_access(ISLANDORA_VIEW_OBJECTS, $page[$dsid])) {
+          $size = islandora_datastream_get_human_readable_size($page[$dsid]);
+          $link = l(t("@dsid (@size)", array('@dsid' => $dsid, '@size' => $size)), islandora_datastream_get_url($page[$dsid], 'download'));
+          $datastreams[$dsid] = array(
+            '#markup' => "$download_prefix$link",
+            '#prefix' => '<div id="paged-tei-seadragon-viewer-download-datastream-' . $dsid . '">',
+            '#suffix' => '</div>',
+          );
+        }
+        else {
+          // Prevents some extra calls from JS, this is a heuristic choice.
+          unset($dsids_to_render[$key]);
+        }
       }
-      else {
-        // Prevents some extra calls from JS, this is a heuristic choice.
-        unset($dsids_to_render[$key]);
-      }
-    }
-    drupal_add_js(
-      array(
-        'islandora_paged_tei_seadragon' => array(
-          'page_dsids' => $dsids_to_render,
-          'download_prefix' => $download_prefix,
+      drupal_add_js(
+        array(
+          'islandora_paged_tei_seadragon' => array(
+            'page_dsids' => $dsids_to_render,
+            'download_prefix' => $download_prefix,
+          ),
         ),
-      ),
-      'setting'
-    );
+        'setting'
+      );
+    }
     if ($tei) {
       $tei_html_name = str_replace(':', '_', $manuscript->id);
 
