@@ -15,9 +15,13 @@
                 }
                 $("#paged-tei-seadragon-viewer-tei").toggle();
 
-                // Quick way to reset the viewer after resizing the page [FIXME?]
-                Drupal.settings.islandora_open_seadragon_viewer.openTileSource(
-                  Drupal.settings.islandora_open_seadragon_viewer.tileSources[0]);
+                // Quick fix to recenter the image -- probably a better way to do it
+                tile_source = new OpenSeadragon.DjatokaTileSource(
+                  settings.islandoraOpenSeadragon.settings.djatokaServerBaseURL,
+                  settings.islandoraOpenSeadragon.resourceUri,
+                  settings.islandoraOpenSeadragon
+                );
+                Drupal.settings.islandora_open_seadragon_viewer.openTileSource(tile_source);
             });
         }
     }
