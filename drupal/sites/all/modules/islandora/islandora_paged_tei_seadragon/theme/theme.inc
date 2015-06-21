@@ -149,11 +149,12 @@ function template_preprocess_islandora_paged_tei_seadragon_viewer(array &$variab
       jQuery("button#toggle").click(function() {
         jQuery(".tei-diplomatic").toggleClass("tei-hidden");
         jQuery(".tei-edited").toggleClass("tei-hidden");
+        $button = jQuery("button#toggle");
 
-        if (jQuery(".tei-edited").hasClass("tei-hidden")) {
-          jQuery("button#toggle").text("Show Edited Text");
+        if ($button.text() == "Show Edited Text") {
+          $button.text("Show Unedited Text");
         } else {
-          jQuery("button#toggle").text("Show Unedited Text");
+          $button.text("Show Edited Text");
         }
       });
     });', 'inline');

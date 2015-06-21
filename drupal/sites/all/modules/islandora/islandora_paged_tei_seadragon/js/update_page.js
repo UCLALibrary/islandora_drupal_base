@@ -117,11 +117,12 @@
                               $("button#toggle").click(function() {
                                 $(".tei-diplomatic").toggleClass("tei-hidden");
                                 $(".tei-edited").toggleClass("tei-hidden");
+                                $button = $("button#toggle");
 
-                                if ($(".tei-edited").hasClass("tei-hidden")) {
-                                  $("button#toggle").text("Show Edited Text");
+                                if ($button.text() == "Show Edited Text") {
+                                  $button.text("Show Unedited Text");
                                 } else {
-                                  $("button#toggle").text("Show Unedited Text");
+                                  $button.text("Show Edited Text");
                                 }
                               });
                             }
