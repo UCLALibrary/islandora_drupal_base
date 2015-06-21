@@ -14,6 +14,10 @@
                     $("#paged-tei-seadragon-viewer-tei-toggle").text('Show Transcription');
                 }
                 $("#paged-tei-seadragon-viewer-tei").toggle();
+
+                // Quick way to reset the viewer after resizing the page [FIXME?]
+                Drupal.settings.islandora_open_seadragon_viewer.openTileSource(
+                  Drupal.settings.islandora_open_seadragon_viewer.tileSources[0]);
             });
         }
     }
