@@ -25,111 +25,38 @@
                 // Update current page to prevent race conditions.
                 Drupal.settings.islandora_paged_tei_seadragon.current_page = pid;
 
-                // Update page rendering.
-                $.ajax({
-                    url: Drupal.settings.basePath + "islandora/rest/v1/object/"
-                        + pid + "/datastream/JP2/token?" + $.param({"uses": 2}),
-                    cache: false,
-                    success: function(token) {
-                        // Drop out here if we are not the most current request.
-                        if (pid != Drupal.settings.islandora_paged_tei_seadragon.current_page) {
-                            return;
+                settings.islandoraOpenSeadragon.resourceUri = location.protocol + "//"
+                  + location.host + "/" + Drupal.settings.basePath + "islandora/object/"
+                  + pid + "/datastream/JP2/view";
+
+                tile_source = new OpenSeadragon.DjatokaTileSource(
+                    settings.islandoraOpenSeadragon.settings.djatokaServerBaseURL,
+                    settings.islandoraOpenSeadragon.resourceUri,
+                    settings.islandoraOpenSeadragon
+                );
+                Drupal.settings.islandora_open_seadragon_viewer.open(tile_source);
+
+                if (tei_defined && tei_html_path != "empty") {
+                  $("#paged-tei-seadragon-viewer-tei").empty();
+                  $("#paged-tei-seadragon-viewer-tei").load(tei_html_path + "/" + tei_html_name + "-" + page_number + ".html",
+                    /* There is overlap here with what's in theme.inc [FIXME] */
+                    function() {
+                      $button = $("button#toggle");
+                      $button.removeClass("tei-hidden");
+
+                      $button.click(function() {
+                        $(".tei-diplomatic").toggleClass("tei-hidden");
+                        $(".tei-edited").toggleClass("tei-hidden");
+
+                        if ($(this).text() == "Show Edited Text") {
+                          $(this).text("Show Unedited Text");
+                        } else {
+                          $(this).text("Show Edited Text");
                         }
-                        // Update seadragon.
-                        settings.islandoraOpenSeadragon.resourceUri =
-                            location.protocol + "//" + location.host + "/" +
-                            Drupal.settings.basePath + "islandora/object/" + pid
-                            + "/datastream/JP2/view?token=" + token;
-                        tile_source = new OpenSeadragon.DjatokaTileSource(
-                            settings.islandoraOpenSeadragon.settings.djatokaServerBaseURL,
-                            settings.islandoraOpenSeadragon.resourceUri,
-                            settings.islandoraOpenSeadragon
-                        );
-                        Drupal.settings.islandora_open_seadragon_viewer.open(tile_source);
-                        // Updating the PID to keep it consistent, it isn't used.
-                        settings.islandoraOpenSeadragon.pid = pid;
-                        // Scroll TEI silently fails on bad transforms
-                        if ($("div[data-paged-viewer-page='" + page_number + "']").position() != null) {
-                            $("#paged-tei-seadragon-viewer-tei").scrollTop(
-                                $("div[data-paged-viewer-page='" + page_number + "']").position().top +
-                                $("#paged-tei-seadragon-viewer-tei").scrollTop()
-                            );
-                        }
-
-                        // Swap out datastream download links.
-                        var iteration;
-                        var page_dsids = Drupal.settings.islandora_paged_tei_seadragon.page_dsids;
-                        for (iteration = 0; iteration < page_dsids.length; ++iteration) {
-                            var dsid = page_dsids[iteration];
-                            $("#paged-tei-seadragon-viewer-download-datastream-" + dsid).empty();
-                            $.ajax({
-                                url: Drupal.settings.basePath + "islandora/rest/v1/object/"
-                                    + pid + "/datastream/" + dsid + "?" + $.param({"content": "FALSE"}),
-                                cache: false,
-                                success: function(datastream_info) {
-                                    // Drop out here if we are not the most current request.
-                                    if (pid != Drupal.settings.islandora_paged_tei_seadragon.current_page) {
-                                        return;
-                                    }
-                                    var kilobyte = 1024;
-                                    var megabyte = kilobyte * 1024;
-                                    var gigabyte = megabyte * 1024;
-                                    var terabyte = gigabyte * 1024;
-                                    var bytes = datastream_info.size;
-                                    var size = 0;
-
-                                    // Round is less precise than Islandora's PHP side.
-                                    if ((bytes >= 0) && (bytes < kilobyte)) {
-                                        size = bytes + ' B';
-                                    }
-                                    else if ((bytes >= kilobyte) && (bytes < megabyte)) {
-                                        size = Math.round(bytes / kilobyte) + ' KiB';
-                                    }
-                                    else if ((bytes >= megabyte) && (bytes < gigabyte)) {
-                                        size = Math.round(bytes / megabyte) + ' MiB';
-                                    }
-                                    else if ((bytes >= gigabyte) && (bytes < terabyte)) {
-                                        size = Math.round(bytes / gigabyte) + ' GiB';
-                                    }
-                                    else if (bytes >= terabyte) {
-                                        size = Math.round(bytes / terabyte) + ' TiB';
-                                    }
-                                    else {
-                                        size = bytes + ' B';
-                                    }
-                                    if (Drupal.settings.islandora_paged_tei_seadragon.downloads_allowed) {
-                                        download = "<div>" + Drupal.settings.islandora_paged_tei_seadragon.download_prefix
-                                            + "<a href=" + Drupal.settings.basePath + "islandora/object/"
-                                        + pid + "/datastream/" + datastream_info.dsid + "/download" + ">" + datastream_info.dsid + " (" + size + ")" + "</a></div>";
-                                        $("#paged-tei-seadragon-viewer-download-datastream-" + datastream_info.dsid).html(download);
-                                    }
-                                }
-                            });
-                        }
-
-                        if (tei_defined && tei_html_path != "empty") {
-                          $("#paged-tei-seadragon-viewer-tei").empty();
-                          $("#paged-tei-seadragon-viewer-tei").load(tei_html_path + "/" + tei_html_name + "-" + page_number + ".html",
-                            /* There is overlap here with what's in theme.inc [FIXME?] */
-                            function() {
-                              $("button#toggle").removeClass("tei-hidden");
-
-                              $("button#toggle").click(function() {
-                                $(".tei-diplomatic").toggleClass("tei-hidden");
-                                $(".tei-edited").toggleClass("tei-hidden");
-                                $button = $("button#toggle");
-
-                                if ($button.text() == "Show Edited Text") {
-                                  $button.text("Show Unedited Text");
-                                } else {
-                                  $button.text("Show Edited Text");
-                                }
-                              });
-                            }
-                          );
-                        }
+                      });
                     }
-                })
+                  );
+                }
             };
 
             // Bind page changes to the select.
