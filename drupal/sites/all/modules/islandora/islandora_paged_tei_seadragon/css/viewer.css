@@ -82,7 +82,8 @@ p{
 }
 p.tei-ab,
 p.tei-noindent{
-    margin-left:-5%;
+    margin-left: 0%;
+    /*margin-left:-5%;*/ /* This rule was making the text appear off the page. I think the rule should be, if the paragraph is also a .ab, no indent needed, so this overwrites the above rule.  -KMD */
 }
 table,
 tr,
@@ -196,17 +197,17 @@ td{
 .tei-marginLeft{
     width:20%;
     float:left;
-    margin-left:-25%;
+    /*margin-left:-25%;*/ /* This made the text dissapear on many pages */
     margin-right:10px;
     clear:left;
-    color:red;
+    /*color:red;*/ /* commented out for now, changes to the XSLT will need to be made to make margin left and right work -KMD*/
 }
 .tei-marginRight{
     width:20%;
     float:right;
     margin-right:5%;
     clear:right;
-    color:red;
+   /*color:red;*/ /* commented out for now, changes to the XSLT will need to be made to make margin left and right work -KMD*/
 }
 /* Too difficult for now inside target framework*/
 .tei-marginTop{
@@ -273,6 +274,7 @@ span.tei-foreignItalic{
 .tei-address{
     display:block;
 }
+/* Are these supposed to be seperate? When I added commas it messed up the display -KMD */
 .tei-date
 .tei-desc
 .tei-editor
@@ -296,7 +298,10 @@ span.tei-foreignItalic{
 .tei-quote
 .tei-term
 .tei-note{display:block;}
+
 .tei-gap {margin-left:5px; margin-right:5px;}
+
+/* Are these supposed to be seperate? When I added commas it messed up the display -KMD */
 .tei-desc
 .tei-gloss
 .tei-seg
@@ -308,6 +313,8 @@ span.tei-foreignItalic{
 .tei-bibl{
     display:block;
 }
+
+/* Are these supposed to be seperate? When I added commas it messed up the display -KMD */
 .tei-biblScope
 .tei-date
 .tei-pubPlace
@@ -422,3 +429,10 @@ table.tei-MODS_metadataTable {width:90%;}
 table.tei-MODS_metadataTable, table.tei-MODS_metadataTable tr td {border:1px black dotted}
 table.tei-MODS_metadataTable tr td.tei-metadataTableLabel {width:20%; text-align:right; padding-right:10px; font-weight:bold;}
 table.tei-MODS_metadataTable tr td.tei-metadataTableData {text-align:left; padding-right:10px; font-weight:normal;}
+
+/* Karin's Changes */
+
+.tei-addrLine {
+	display: block;
+}
+
