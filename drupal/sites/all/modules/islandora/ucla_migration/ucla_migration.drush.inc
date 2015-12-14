@@ -198,7 +198,7 @@ function ucla_migration_drush_command() {
                 'required' => 'true'
             ),
             'digitalObject' => array(
-                'description' => 'Provide one of following choices (MODS,IMAGE,PDF,VIDEO,TEI)',
+                'description' => 'Provide one of following choices (MODS,IMAGE,PDF,VIDEO,TEI,TN)',
                 'required' => 'true'
             ),
         ),
@@ -224,7 +224,7 @@ function ucla_migration_drush_command() {
                 'required' => 'true'
             ),
             'digitalObject' => array(
-                'description' => 'Provide one of following choices (MODS,IMAGE,PDF,VIDEO)',
+                'description' => 'Provide one of following choices (MODS,IMAGE,PDF,VIDEO,TN)',
                 'required' => 'true'
             ),
         ),
@@ -2118,7 +2118,7 @@ function minimum_metadata_ingest() {
         return;
     }
     if (!isset($digitalObject)) {
-        drush_set_error('Please specify one of the following for digitalObject (IMAGE , PDF, VIDEO, MODS)  not specified', '', 'Error: ');
+        drush_set_error('Please specify one of the following for digitalObject (IMAGE , PDF, VIDEO, MODS, TN)  not specified', '', 'Error: ');
         return;
     }
 
@@ -2432,7 +2432,7 @@ function add_dataStream_to_digitalObject() {
 
 
     if (!isset($digitalObject)) {
-        drush_set_error('Please specify one of the following for digitalObject (IMAGE , PDF, VIDEO, MODS, TEI)  not specified', '', 'Error: ');
+        drush_set_error('Please specify one of the following for digitalObject (IMAGE , PDF, VIDEO, MODS, TEI, TN)  not specified', '', 'Error: ');
         return;
     }
 
@@ -2481,28 +2481,39 @@ function add_dataStream_to_digitalObject() {
             if (fopen($file_path, "r")) {
 
                 $file_nameRaw = basename($file_path);
-                $file_name = str_replace(".xml", "", $file_nameRaw);
-                $file_name = str_replace("_TEI", "", $file_name);
+                $file_name = strtolower($file_nameRaw);
+                $file_name = str_replace(".xml", "", $file_name);
+                $file_name = str_replace(".tif", "", $file_name);
+                $file_name = str_replace(".pdf", "", $file_name);
                 $file_name = str_replace("_tei", "", $file_name);
-                $file_name = str_replace("_MODS", "", $file_name);
+                $file_name = str_replace("_mods", "", $file_name);
+                $file_name = str_replace(".mp4", "", $file_name);
+                $file_name = str_replace(".png", "", $file_name);                
+                $file_name = str_replace("_a", "", $file_name);
                 watchdog('Ingest Success filename', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
-                $file_name = strtolower($file_name);
+               
                 foreach ($results as $result) {
                     $label = $result['label']['value'];
+                    $label = strtolower($label);
+                   // $label = urldecode($label);
                     $label = str_replace(".tif", "", $label);
                     $label = str_replace(".pdf", "", $label);
-                    $label = str_replace(".TIF", "", $label);
+                    
                     $label = str_replace(".xml", "", $label);
-                    $label = str_replace("_MODS", "", $label);
-                    $label = str_replace("_TEI", "", $label);
+                    $label = str_replace("_mods", "", $label);
+                   
                     $label = str_replace("_tei", "", $label);
+                    $label = str_replace(".mp4", "", $label);
+                    $label = str_replace(".png", "", $label);
+                    
                     $label = str_replace("_a", "", $label);
-                    $label = strtolower($label);
+                    
                     if ($file_name == $label) {
                         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_nameRaw), WATCHDOG_ERROR);
                         $object = islandora_object_load($result['obj']['value']);
                         // $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:sp_large_image_cmodel');
                         _add_datastream_to_object($object, $file_path, $digitalObject);
+                        break;
                     }
                 }
                 watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
@@ -2588,7 +2599,9 @@ function _add_datastream_to_object($object, $file_path, $digitalObject) {
     if ($digitalObject === 'IMAGE') {
         _add_tiff_to_object($object, $file_path);
     }
-
+    if ($digitalObject === 'TN') {
+        _add_png_to_object($object, $file_path);
+    }
     if ($digitalObject === 'PDF') {
         _add_pdf_to_object($object, $file_path);
     }
@@ -2631,6 +2644,10 @@ function _is_valid_extension($file_path) {
     if ($ext === 'xml') {
         return TRUE;
     }
+    
+    if ($ext === 'png') {
+        return TRUE;
+    }
 
     if ($ext === 'mp4') {
         return TRUE;
@@ -2669,6 +2686,38 @@ function _add_images_to_object($object, $tiff_path, $jpeg_path) {
             $object->ingestDatastream($datastream);
         }
     }
+}
+
+
+/**
+ * Adds a tiff to the supplied object as the OBJ datastream.
+ *
+ * @param FedoraObject $object
+ *   The object you wish to add the datastream to.
+ *
+ * @param string $png_path
+ *   Valid path to a png file.
+ */
+function _add_png_to_object($object, $png_path) {
+   $datastream_id = 'TN';
+   
+    $ingest = !isset($object[$datastream_id]);
+   
+    if ($ingest) {
+      $ds = $object->constructDatastream($datastream_id, "M");
+      $ds->label = $datastream_id;
+    }
+    else {
+      $ds = $object[$datastream_id];
+    }
+    $ds->mimetype = "image/png";
+    $ds->content = file_get_contents($png_path);
+        //->setContentFromFile($png_path); gave filesize() stats error
+    if ($ingest) {
+      $object->ingestDatastream($ds);
+    }
+  
+    
 }
 
 /**
