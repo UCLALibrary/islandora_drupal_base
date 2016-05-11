@@ -77,6 +77,21 @@ function ucla_migration_drush_command() {
         ),
         'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
     );
+    $items['ucla_add_genre_to_MODS_for_namespace'] = array(
+        'callback' => 'add_genre_to_MODS_for_namespace',
+        'description' => 'add missing genre to dep mods',
+        'arguments' => array(
+            'fedora_namespace' => array(
+                'description' => 'The Fedora namespace to update the datastreams under.',
+                'required' => 'true'
+            ),
+        ),
+        'options' => array(),
+        'examples' => array(
+            'simple example' => 'drush -u 1 ucla_add_genre_to_MODS_for_namespace --fedora_namespace=greenmovement',
+        ),
+        'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_LOGIN,
+    );
     $items['ucla_make_namespace_versionable'] = array(
         'callback' => 'ucla_migration_make_all_datastreams_versionable',
         'description' => "Sets all datastreams for all objects to versionable in the given namespace. Only run after executing ucla_save_pids_for_namespace and confirming that Fedora's resource index is turned off.",
@@ -491,6 +506,58 @@ function update_Label_from_DC_for_namespace() {
             watchdog('UCLA Migration', "begin dc title @results", array('@results' => $dc_array[0]->__toString()), WATCHDOG_ERROR);
 
             $object->label = $dc_array[0]->__toString();
+        }
+    }
+}
+
+function add_genre_to_MODS_for_namespace(){
+    $fedora_namespace = drush_get_option('fedora_namespace');
+
+
+
+
+
+
+    if (!isset($fedora_namespace)) {
+        drush_set_error('Fedora namespace not provided', 'A Fedora namespace to associate with the ingest must be provided', 'Error: ');
+        return;
+    }
+
+
+
+    
+
+    // Get a connection to Fedora.
+    $connection = islandora_get_tuque_connection();
+    $repo = $connection->repository;
+
+    // SPARQL query to get all objects in a given namespace.
+    $query = "
+    SELECT ?obj
+    FROM <#ri>
+    WHERE {
+      ?obj <info:fedora/fedora-system:def/model#hasModel> ?model .
+      FILTER(regex(str(?obj), '^info:fedora/$fedora_namespace:'))
+    }
+  ";
+
+    // Execute the query.
+    $results = $repo->ri->sparqlQuery($query);
+    watchdog('UCLA Migration', "begin 2 @results", array('@results' => $results), WATCHDOG_ERROR);
+      foreach ($results as $result) {
+        watchdog('UCLA Migration', "begin 3 @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
+        if ($result['obj']['value'] !== $fedora_namespace . ':1') {
+            watchdog('UCLA Migration', "begin 4 @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
+            $object = islandora_object_load($result['obj']['value']);
+
+
+            if (!(isset($object['MODS']) && !empty($object['MODS']))) {
+                watchdog('UCLA Migration', "begin  No mods @results", array('@results' => $result['obj']['value']), WATCHDOG_ERROR);
+            } else {
+
+                $mods_txt = $object['MODS']->content;
+                ucla_migration_add_genre_to_mods($object, $mods_txt);
+            }
         }
     }
 }
@@ -1334,6 +1401,39 @@ function ucla_migration_add_mods_to_object($object, $mods_txt) {
     $datastream->mimetype = "text/xml";
     $datastream->setContentFromString($mods_txt);
     $object->ingestDatastream($datastream);
+}
+
+function ucla_migration_add_genre_to_mods($object, $mods_txt){
+    try {
+        $xslt_proc = new XSLTProcessor();
+        $xslt_file = drupal_get_path('module', 'ucla_migration') . '/transforms/add_genre_mods.xsl';
+        $xslt_dom = new DOMDocument();
+        $xslt_dom->load($xslt_file);
+        $xslt_proc->importStyleSheet($xslt_dom);
+
+        // Prepare the mods DOM to transform.
+        $mods_dom = new DOMDocument();
+        $mods_dom->loadXML($mods_txt);
+
+        // Transform the MODS to DC.
+        $mods_new_txt = $xslt_proc->transformToXML($mods_dom);
+        watchdog('UCLA Migration', "Mods Record is : @results", array('@results' => $mods_new_txt), WATCHDOG_ERROR);
+        // Add  or update DC record to the object as a datastream.
+        if (isset($object['MODS'])) {
+            $datastream = $object['MODS'];
+        } else {
+            $datastream = $object->constructDatastream('MODS','M');
+            $datastream->label = "MODS Record";
+            $datastream->mimetype = "text/xml";
+        }
+
+        //$datastream->setContentFromString($mods_new_txt);
+        $datastream->content = $mods_new_txt;
+        $object->ingestDatastream($datastream);
+    } catch (Exception $e) {
+
+        watchdog('UCLA Migration', "Exception Trace is : @results", array('@results' => $e->getTraceAsString()), WATCHDOG_ERROR);
+    }
 }
 
 /**
