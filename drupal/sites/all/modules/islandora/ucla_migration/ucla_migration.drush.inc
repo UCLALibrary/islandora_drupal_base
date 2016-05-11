@@ -2589,7 +2589,7 @@ function add_dataStream_to_digitalObject() {
                 $file_name = str_replace("_mods", "", $file_name);
                 $file_name = str_replace(".mp4", "", $file_name);
                 $file_name = str_replace(".png", "", $file_name);                
-                $file_name = str_replace("_a", "", $file_name);
+//                $file_name = str_replace("_a", "", $file_name);
                 watchdog('Ingest Success filename', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
                
                 foreach ($results as $result) {
@@ -2606,14 +2606,14 @@ function add_dataStream_to_digitalObject() {
                     $label = str_replace(".mp4", "", $label);
                     $label = str_replace(".png", "", $label);
                     
-                    $label = str_replace("_a", "", $label);
+//                    $label = str_replace("_a", "", $label);
                     
                     if ($file_name == $label) {
                         watchdog('Ingest Success started', ' object @file_name', array('@file_name' => $file_nameRaw), WATCHDOG_ERROR);
                         $object = islandora_object_load($result['obj']['value']);
                         // $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:sp_large_image_cmodel');
                         _add_datastream_to_object($object, $file_path, $digitalObject);
-                        break;
+			break;
                     }
                 }
                 watchdog('Ingest Success', 'Migrated object @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
