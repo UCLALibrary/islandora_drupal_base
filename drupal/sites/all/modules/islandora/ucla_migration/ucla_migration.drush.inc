@@ -2532,7 +2532,7 @@ function add_dataStream_to_digitalObject() {
 
 
     if (!isset($digitalObject)) {
-        drush_set_error('Please specify one of the following for digitalObject (IMAGE , PDF, VIDEO, MODS, TEI, TN)  not specified', '', 'Error: ');
+        drush_set_error('Please specify one of the following for digitalObject (TIFF,JPEG , PDF, VIDEO, MODS, TEI, TN)  not specified', '', 'Error: ');
         return;
     }
 
@@ -2588,7 +2588,8 @@ function add_dataStream_to_digitalObject() {
                 $file_name = str_replace("_tei", "", $file_name);
                 $file_name = str_replace("_mods", "", $file_name);
                 $file_name = str_replace(".mp4", "", $file_name);
-                $file_name = str_replace(".png", "", $file_name);                
+                $file_name = str_replace(".png", "", $file_name);  
+                $file_name = str_replace(".jpg", "", $file_name); 
 //                $file_name = str_replace("_a", "", $file_name);
                 watchdog('Ingest Success filename', ' object @file_name', array('@file_name' => $file_name), WATCHDOG_ERROR);
                
@@ -2605,7 +2606,7 @@ function add_dataStream_to_digitalObject() {
                     $label = str_replace("_tei", "", $label);
                     $label = str_replace(".mp4", "", $label);
                     $label = str_replace(".png", "", $label);
-                    
+                    $label = str_replace(".jpg", "", $label); 
 //                    $label = str_replace("_a", "", $label);
                     
                     if ($file_name == $label) {
@@ -2696,8 +2697,17 @@ function _add_datastream_to_object($object, $file_path, $digitalObject) {
 
     //$ext = strtolower(pathinfo($file_path, PATHINFO_EXTENSION));
 
-    if ($digitalObject === 'IMAGE') {
+    if ($digitalObject === 'TIFF') {
         _add_tiff_to_object($object, $file_path);
+    }
+    if ($digitalObject === 'TIF') {
+        _add_tiff_to_object($object, $file_path);
+    }
+    if ($digitalObject === 'JPEG') {
+        _add_jpeg_to_object($object, $file_path);
+    }
+    if ($digitalObject === 'JPG') {
+        _add_jpeg_to_object($object, $file_path);
     }
     if ($digitalObject === 'TN') {
         _add_png_to_object($object, $file_path);
@@ -2790,7 +2800,7 @@ function _add_images_to_object($object, $tiff_path, $jpeg_path) {
 
 
 /**
- * Adds a tiff to the supplied object as the OBJ datastream.
+ * Adds a png to the supplied object as the OBJ datastream.
  *
  * @param FedoraObject $object
  *   The object you wish to add the datastream to.
@@ -2835,6 +2845,24 @@ function _add_tiff_to_object($object, $tiff_path) {
     $datastream->label = "High Quality Tiff";
     $datastream->mimetype = "image/tiff";
     $datastream->setContentFromFile($tiff_path);
+    $object->ingestDatastream($datastream);
+}
+
+/**
+ * Adds a tiff to the supplied object as the OBJ datastream.
+ *
+ * @param FedoraObject $object
+ *   The object you wish to add the datastream to.
+ *
+ * @param string $tiff_path
+ *   Valid path to a tiff file.
+ */
+function _add_jpeg_to_object($object, $jpeg_path) {
+    $object->relationships->add(FEDORA_MODEL_URI, 'hasModel', 'islandora:sp_basic_image');
+    $datastream = $object->constructDatastream('OBJ', 'M');
+    $datastream->label = "High Quality JPEG";
+    $datastream->mimetype = "image/jpeg";
+    $datastream->setContentFromFile($jpeg_path);
     $object->ingestDatastream($datastream);
 }
 
